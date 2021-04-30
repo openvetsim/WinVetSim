@@ -97,6 +97,8 @@ simstatusMain(void)
 	int socklen;
 	WSADATA w;
 
+	printf("simstatus is on port %d\n", portno);
+
 	SOCKADDR_IN addr;                     // The address structure for a TCP socket
 
 	int iResult, iSendResult;

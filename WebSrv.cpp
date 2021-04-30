@@ -35,7 +35,7 @@ int isServerRunning(void)
 	string port;
 	int sts;
 
-	host = PHP_SERVER_IP;
+	host = PHP_SERVER_ADDR;
 	port  = std::to_string(PHP_SERVER_PORT );
 	page = "hostCheck.php";
 	sts = checkURL(host, port, page);
@@ -56,10 +56,12 @@ int startPHPServer(void )
 	if (isServerRunning() == 0)
 	{
 		printf("Starting PHP Server\n");
+
 		// start [<title>] //d <path>] [program [<parameter>...]]
 		sprintf_s(commandLine, 2048, 
-				"start \"WinVetSim PHP\" /d  C:\\inetpub\\wwwroot /min \"C:\\Program Files\\PHP\\v7.0\\php.exe\" -S %s:%d ",
-				PHP_SERVER_IP, PHP_SERVER_PORT );
+		//		"start \"WinVetSim PHP\" /d  C:\\inetpub\\wwwroot /min \"C:\\Program Files\\PHP\\v7.4\\php.exe\" -S %s:%d ",
+				"start \"WinVetSim PHP\" /d  \"%s\" /min \"PHP8.0\\php.exe\" -S %s:%d ",
+			localConfig.html_path, PHP_SERVER_ADDR, PHP_SERVER_PORT );
 		//printf("%s\n", commandLine);
 		system(commandLine);
 		Sleep(1000);

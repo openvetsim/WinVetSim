@@ -390,7 +390,8 @@ pulseTask(void )
 	struct sockaddr client_addr;
 	int socklen;
 	WSADATA w;
-	BOOL stsb;
+
+	printf("Pulse is on port %d\n", portno);
 
 	// Seed rand, needed for vpc array generation
 	srand(NULL);

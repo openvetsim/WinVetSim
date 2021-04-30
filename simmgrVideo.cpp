@@ -20,7 +20,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "vetsim.h"
-#include "sendKeys.h"
 #include <psapi.h>
 #include <tlhelp32.h>
 
@@ -28,12 +27,7 @@
 
 using namespace std;
 
-// CSendKeys Class
-CSendKeys skey;
-
 struct obsData obsd;
-
-
 
 DWORD processId;
 /**
@@ -42,7 +36,6 @@ DWORD processId;
  *
  *
  */
-
 
 BOOL CALLBACK EnumWindowsProcMy(HWND hwnd, LPARAM lParam)
 {
@@ -59,13 +52,13 @@ BOOL CALLBACK EnumWindowsProcMy(HWND hwnd, LPARAM lParam)
 }
 
 void
-getObsHandle(int first, const char *appName )
+getObsHandle(const char *appName )
 {
 	PROCESSENTRY32 entry;
 	entry.dwSize = sizeof(PROCESSENTRY32);
 	BOOL sts;
 	wchar_t app[512];
-	
+
 	swprintf(app, 512, L"%S", appName );
 
 	if (obsd.obsWnd == NULL)
@@ -80,7 +73,7 @@ getObsHandle(int first, const char *appName )
 				if (wcscmp(entry.szExeFile, app) == 0)
 				{
 					HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, entry.th32ProcessID);
-					wprintf(L"Found App %S\n", app);
+					wprintf(L"Found App %ls\n", app);
 					obsd.obsPid = entry.th32ProcessID; 
 					sts = EnumWindows(EnumWindowsProcMy, obsd.obsPid);
 					// Do stuff..
@@ -90,43 +83,33 @@ getObsHandle(int first, const char *appName )
 			} while (Process32Next(snapshot, &entry) == TRUE);
 		}
 		CloseHandle(snapshot);
-		if (first && obsd.obsWnd == NULL)
-		{
-			// Not found. Start OBS and wait 2 seconds
-			sts = skey.SendKeys(L"{LWIN}obs{ENTER}", 0);
-			Sleep(2000);
-			getObsHandle(0, "obs64.exe");
-		}
 	}
 }
-wchar_t startKeys[] = L"{F4}";
-wchar_t stopKeys[] = L"{F5}";
+
 void
 recordStartStop(int record)
 {
-	BOOL sts;
-	wchar_t keys[32];
+	//BOOL sts;
+	//wchar_t keys[32];
 
-	getObsHandle(1, "obs64.exe");
+	getObsHandle("obs64.exe");
 
 	if (obsd.obsWnd == NULL)
 	{
 		printf("No OBS Found\n");
 		return;
 	}
-	skey.AppActivate(obsd.obsWnd);
 	if (record)
 	{
 		// Send Start
-
-		sts = skey.SendKeys(startKeys, 0);
+		// Signal vitals JS code to trigger recording start
 	}
 	else
 	{
 		sprintf_s(obsd.newFilename, sizeof(obsd.newFilename), "%s", simmgr_shm->logfile.vfilename);
 
 		// Send Stop
-		sts = skey.SendKeys(stopKeys, 0);
+		// Signal vitals JS code to trigger recording stop
 		obsd.obsWnd = NULL;
 	}
 }
@@ -151,7 +134,6 @@ getFileSize(char* fname)
 int
 getLatestFile(char* rname, char* dir)
 {
-	struct dirent* dp;
 	ULARGE_INTEGER lint;
 	unsigned long long fileDate = 0;
 	unsigned long long latestDate = 0;
@@ -170,7 +152,7 @@ getLatestFile(char* rname, char* dir)
 			if (fileDate > latestDate)
 			{
 				latestDate = fileDate;
-				swprintf_s(latestFname, MAX_PATH, L"%s/%S", dir, &FindFileData.cFileName);
+				swprintf_s(latestFname, MAX_PATH, L"%S/%ls", dir, &FindFileData.cFileName);
 			}
 		} while (FindNextFile(hFind, &FindFileData));
 		FindClose(hFind);
@@ -178,7 +160,7 @@ getLatestFile(char* rname, char* dir)
 
 	if (wcslen(latestFname) != 0)
 	{
-		sprintf_s(rname, sizeof(rname), "%s", latestFname);
+		sprintf_s(rname, sizeof(rname), "%ls", latestFname);
 		return (0);
 	}
 	else
@@ -314,14 +296,14 @@ void ShowDesktop()
 		wprintf(L"SendInput failed: 0x%x\n", HRESULT_FROM_WIN32(GetLastError()));
 	}
 }
-
+/*
 void
 testKeys(void)
 {
-	BOOL sts;
+	//BOOL sts;
 	char pgm[] = "obs64.exe";
 	HWND wnd;
-	getObsHandle(0, pgm);
+	getObsHandle(pgm);
 	if (obsd.obsWnd)
 	{
 		INPUT inputs[2];
@@ -365,14 +347,10 @@ testKeys(void)
 			wprintf(L"SendInput 'B' failed: 0x%x\n", HRESULT_FROM_WIN32(GetLastError()));
 			return;
 		}
-		//sts = skey.SendKeys(testKeyStr2, 0);
-		//Sleep(10000);
-		//skey.AppActivate(obsd.obsWnd);
-		//sts = skey.SendKeys(testKeyStr3, 0);
-		//Sleep(2000);
 	}
 	else
 	{
 		printf("Failed handle for %s\n", pgm);
 	}
 }
+*/

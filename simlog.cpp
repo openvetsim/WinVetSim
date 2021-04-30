@@ -176,7 +176,7 @@ simlog_open(int rw)
 			}
 			else
 			{
-				printf("simlog_open failed to take sema 0x%08xL\n");
+				printf("simlog_open failed to take sema 0x%08xL\n", sts);
 				return (-3);
 			}
 		}

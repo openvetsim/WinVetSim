@@ -45,6 +45,12 @@
     <ClCompile Include="XMLRead.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="simmgrVideo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="keys.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vetsim.h">

@@ -1740,7 +1740,6 @@ readScenario(const char* name)
 	int sts;
 	char filename[1400];
 	extern char sessionsPath[];
-	int cc;
 
 	sprintf_s(sessionsPath, 1088, "C:\\inetpub\\wwwroot\\scenarios");
 	sprintf_s(filename, 1400, "%s\\%s\\main.xml", sessionsPath, name);

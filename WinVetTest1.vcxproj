@@ -154,11 +154,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="keys.cpp" />
     <ClCompile Include="llist.cpp" />
     <ClCompile Include="pulse.cpp" />
     <ClCompile Include="scenario.cpp" />
     <ClCompile Include="sim-parse.cpp" />
     <ClCompile Include="simlog.cpp" />
+    <ClCompile Include="simmgrVideo.cpp" />
     <ClCompile Include="simstatus.cpp" />
     <ClCompile Include="simutil.cpp" />
     <ClCompile Include="VetSim.cpp" />

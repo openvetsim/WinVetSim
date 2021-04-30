@@ -58,6 +58,7 @@ std::time_t nibp_run_complete_time;
 
 int scenarioCount = 0;
 struct simmgr_shm shmSpace;
+struct localConfiguration localConfig;
 #define BUF_SIZE 2048
 char msg_buf[BUF_SIZE];
 int vs_iiLockTaken = 0;
@@ -123,7 +124,8 @@ void SignalHandler(int signal)
 }
 
 void getObsHandle(int first, const char *appName);
-void testKeys(void);
+int testKeys(void);
+int getKeys(void);
 
 int main()
 {
@@ -134,6 +136,18 @@ int main()
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	printf("Starting\n");
+
+	// Set configurable parameters to defaults
+	localConfig.port_pulse = DEFAULT_PORT_PULSE;
+	localConfig.port_status = DEFAULT_PORT_STATUS;
+	localConfig.php_server_port = DEFAULT_PHP_SERVER_PORT;
+	sprintf_s(localConfig.php_server_addr, "%s", DEFAULT_PHP_SERVER_ADDRESS );
+	sprintf_s(localConfig.log_name, "%s", DEFAULT_LOG_NAME );
+	sprintf_s(localConfig.html_path, "%s", DEFAULT_HTML_PATH );
+
+	// Allow parameters to be overridedn from registry
+	getKeys();
+
 	initSHM(1, 0);
 
 	simmgrInitialize();
