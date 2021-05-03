@@ -37,7 +37,7 @@ int isServerRunning(void)
 
 	host = PHP_SERVER_ADDR;
 	port  = std::to_string(PHP_SERVER_PORT );
-	page = "hostCheck.php";
+	page = "sim-ii/hostCheck.php";
 	sts = checkURL(host, port, page);
 	cout << "URL: " << host << ":" << port << "/" << page << " sts: " << sts << endl;
 
