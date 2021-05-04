@@ -134,6 +134,7 @@ int main()
 	char cc;
 	extern struct obsData obsd;
 	setvbuf(stdout, NULL, _IONBF, 0);
+	char cmd[BUF_SIZE];
 
 	printf("Starting\n");
 
@@ -170,6 +171,10 @@ int main()
 		log_message("", msg_buf);
 		exit(-1);
 	}
+	// Open web page
+	sprintf_s(cmd, BUF_SIZE, "start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );
+	system(cmd);
+	
 	obsd.obsWnd = NULL;
 
 	while (1)
@@ -1796,7 +1801,8 @@ scan_commands(void)
 		if (simmgr_shm->instructor.telesim.vid[v].next > 0 &&
 			simmgr_shm->instructor.telesim.vid[v].next != simmgr_shm->status.telesim.vid[v].next)
 		{
-			//syslog(LOG_NOTICE, "TeleSim vid %d Next %d:%d", v, simmgr_shm->status.telesim.vid[v].next, simmgr_shm->instructor.telesim.vid[v].next);
+			sprintf_s(buf, BUF_SIZE, "TeleSim vid %d Next %d:%d", v, simmgr_shm->status.telesim.vid[v].next, simmgr_shm->instructor.telesim.vid[v].next);
+			simlog_entry(buf);
 			simmgr_shm->status.telesim.vid[v].command = simmgr_shm->instructor.telesim.vid[v].command;
 			simmgr_shm->status.telesim.vid[v].param = simmgr_shm->instructor.telesim.vid[v].param;
 			simmgr_shm->status.telesim.vid[v].next = simmgr_shm->instructor.telesim.vid[v].next;

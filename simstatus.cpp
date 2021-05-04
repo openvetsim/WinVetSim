@@ -29,7 +29,7 @@
 void sendStatus(void);
 void sendQuickStatus(void);
 void sendSimctrData(void);
-void fixColons(char* args, int len);
+void replaceAll(char* args, size_t len, const char* needle, const char replace);
 
 struct paramCmds
 {
@@ -42,7 +42,10 @@ void makejson(string key, string content)
 {
 	htmlReply += "\"" + key + "\":\"" + content + "\"";
 }
-
+void makejson(string key, char *content)
+{
+	htmlReply += "\"" + key + "\":\"" + content + "\"";
+}
 std::vector<std::string> explode(std::string const& s, char delim)
 {
 	std::vector<std::string> result;
@@ -208,7 +211,10 @@ simstatusMain(void)
 				}
 				if (args)
 				{
-					fixColons(args, (int)strlen(args) + 1);
+					replaceAll(args, strlen(args), "%3A", ':');
+					replaceAll(args, strlen(args), "+", ' ');
+					replaceAll(args, strlen(args), "%20", ' ');
+					replaceAll(args, strlen(args), "%2B", '+');
 					cptr = strstr(args, " HTTP/");
 					if (cptr)
 					{
@@ -320,6 +326,7 @@ struct argument
 	string key;
 	string value;
 };
+
 
 int
 simstatusHandleCommand(char *args)
@@ -577,6 +584,7 @@ simstatusHandleCommand(char *args)
 			}
 			else if (v[1].compare("telesim") == 0)
 			{
+				//printf("telesim_parse(%s )\n", value.c_str() );
 				sts = telesim_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.telesim);
 			}
 			else if (v[1].compare("vocals") == 0)
@@ -1247,14 +1255,15 @@ sendStatus(void)
 		{
 			htmlReply += ",\n";
 		}
-		//printf("TSIM_WINDOW %d %p\n", i, simmgr_shm->status.telesim.vid[i].name );
-		sprintf_s(buffer, 256, "\" %d\" : {\n", vidCount);
+		//printf("TSIM_WINDOW %d %s %d\n", i, simmgr_shm->status.telesim.vid[i].name, simmgr_shm->status.telesim.vid[i].next);
+		sprintf_s(buffer, 256, "\"%d\" : {\n", vidCount);
 		htmlReply += buffer;
 		vidCount++;
-		makejson("name", "");
-		/*
-		if (simmgr_shm->status.telesim.vid[i].name && 
-			strlen(simmgr_shm->status.telesim.vid[i].name) > 0 )
+
+		//makejson("name", "");
+		
+		
+		if ( strlen(simmgr_shm->status.telesim.vid[i].name) > 0 )
 		{
 			makejson("name", simmgr_shm->status.telesim.vid[i].name);
 		}
@@ -1272,7 +1281,7 @@ sendStatus(void)
 		htmlReply += ",\n";
 		_itoa_s(simmgr_shm->status.telesim.vid[i].next, buffer, 256, 10);
 		makejson("next", buffer);
-		*/
+		
 		htmlReply += "  }";
 	}
 	if (vidCount > 0)
@@ -1413,33 +1422,57 @@ sendQuickStatus(void)
 	makejson("debug3", buffer);
 	htmlReply += "\n}\n";
 }
-void
-fixColons(char* args, int len)
+void replaceAll(char* args, size_t len, const char* needle, const char replace)
 {
 	char* src;
 	char* next;
 	string lbuf;
-	const char needle[] = "%3A";
+	int sts;
+	int count = 0;
 
-	src = args;
-	while (src)
+	if (strlen(needle) == 1)
 	{
-		next = strstr(src, needle);
-		if (next)
+		int i;
+		for (i = 0; i < len; i++)
 		{
-			next[0] = ':';
-			next[1] = 0;
-			lbuf += src;
-			src = next + strlen(needle);
-		}
-		else
-		{
-			lbuf += src;
-			src = NULL;
+			if ( args[i] == needle[0] )
+			{
+				args[i] = replace;
+			}
 		}
 	}
-	if (args)
+	else
 	{
-		sprintf_s(args, len, "%s", lbuf.c_str());
+		src = args;
+		while (src)
+		{
+			next = strstr(src, needle);
+			if (next)
+			{
+				next[0] = replace;
+				next[1] = 0;
+				lbuf += src;
+				src = next + strlen(needle);
+				count++;
+			}
+			else
+			{
+				lbuf += src;
+				src = NULL;
+			}
+		}
+		if (count > 0)
+		{
+			if (args &&
+				strlen(args) > 0 &&
+				len > 0 &&
+				lbuf.length() > 0)
+			{
+				sts = sprintf_s(args,
+					len,
+					"%s",
+					lbuf.c_str());
+			}
+		}
 	}
 }

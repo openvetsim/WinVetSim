@@ -68,7 +68,7 @@
 #define DEFAULT_PORT_PULSE			40844	// Note: If changed, must also change in SimController
 #define DEFAULT_PORT_STATUS			40845	// Note: If changes, must also change in Sim-II
 #define DEFAULT_PHP_SERVER_PORT		8081
-#define DEFAULT_PHP_SERVER_ADDRESS	"192.168.1.36"
+#define DEFAULT_PHP_SERVER_ADDRESS	"127.0.0.1"
 #define DEFAULT_LOG_NAME			"vetsim.log"
 #define DEFAULT_HTML_PATH			"html"
 
