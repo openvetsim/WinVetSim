@@ -544,6 +544,7 @@ struct obsData
 #define	OPEN_WITH_CREATE		1
 #define OPEN_ACCESS				0
 
+int vetsim(void);
 
 //In simmgrCommon
 void simmgrRun(void);

@@ -304,7 +304,7 @@ readSubKeys(void)
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", stringBuf, STR_SIZE);
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
-		len = strlen(localConfig.php_server_addr);
+		len = (int)strlen(localConfig.php_server_addr);
 		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", localConfig.php_server_addr, len );
 	}
 	else
@@ -314,7 +314,7 @@ readSubKeys(void)
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "LogName", stringBuf, STR_SIZE);
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
-		len = strlen(localConfig.log_name);
+		len = (int)strlen(localConfig.log_name);
 		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "LogName", localConfig.log_name, len);
 	}
 	else
@@ -325,7 +325,7 @@ readSubKeys(void)
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "HTML_Path", stringBuf, STR_SIZE);
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
-		len = strlen(localConfig.html_path);
+		len = (int)strlen(localConfig.html_path);
 		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "HTML_Path", localConfig.html_path, len);
 	}
 	else

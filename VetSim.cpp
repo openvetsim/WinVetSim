@@ -127,46 +127,14 @@ void getObsHandle(int first, const char *appName);
 int testKeys(void);
 int getKeys(void);
 
-int main(int argc, char *argv[], char* envp[])
+int vetsim()
 {
 	int last = -1;
 	int count = 0;
-	int i;
 	char cc;
 	extern struct obsData obsd;
 	setvbuf(stdout, NULL, _IONBF, 0);
 	char cmd[BUF_SIZE];
-	char* ptr;
-
-	if (argc > 1)
-	{
-		for (i = 1; i < argc; i++)
-		{
-			if (strncmp(argv[i], "-v", 2) == 0 || strncmp(argv[i], "-V", 2) == 0 ||
-				strncmp(argv[i], "\\v", 2) == 0 || strncmp(argv[i], "\\V", 2) == 0 ||
-				strncmp(argv[i], "/v", 2) == 0 || strncmp(argv[i], "/V", 2) == 0 ||
-				strncmp(argv[i], "--version", 9) == 0 || strncmp(argv[i], "--Version", 9) == 0)
-			{
-				ptr = argv[0];
-				int c = 0;
-				while (c < strlen(argv[0]))
-				{
-					if (argv[0][c] == '\\' )
-					{
-						ptr = &argv[0][c+1];
-					}
-					c++;
-				}
-				printf("%s: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN );
-				exit(0);
-			}
-			else
-			{
-				printf("Unrecognized argumment: \"%s\"\n", argv[i]);
-				exit(-1);
-			}
-		}
-	}
 
 	// Set configurable parameters to defaults
 	localConfig.port_pulse = DEFAULT_PORT_PULSE;
@@ -234,6 +202,7 @@ int main(int argc, char *argv[], char* envp[])
 	}
 	printf("Exiting\n" );
 	stopPHPServer();
+	exit(0);
 }
 
 void
@@ -617,15 +586,19 @@ awrr_check(void)
 	// AWRR Calculation - Look at no more than BREATH_CALC_LIMIT breaths - Skip if no breaths within 20 seconds
 	lastTime = 0;
 	firstTime = 0;
-	prev = breathLogNext - 1;
-	if (prev < 0)
+	if (breathLogNext == 0)
 	{
 		prev = BREATH_LOG_LEN - 1;
 	}
+	else
+	{
+		prev = breathLogNext - 1;
+	}
+
 	breaths = 0;
 	intervals = 0;
-
 	lastTime = breathLog[prev];
+
 	if (lastTime <= 0)  // Don't look at empty logs
 	{
 		simmgr_shm->status.respiration.awRR = 0;

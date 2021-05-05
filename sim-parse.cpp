@@ -338,9 +338,9 @@ telesim_parse(const char* elem, const char* value, struct telesim* ts)
 	const char* ptr;
 	const char* arg;
 
-	char buf[512];
-	sprintf_s(buf, 512, "%s %s %s", "telesim", elem, value);
-	log_message("", buf);
+	//char buf[512];
+	//sprintf_s(buf, 512, "%s %s %s", "telesim", elem, value);
+	//log_message("", buf);
 
 	if ((!elem) || (!value) || (!ts))
 	{
