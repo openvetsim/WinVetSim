@@ -127,16 +127,40 @@ void getObsHandle(int first, const char *appName);
 int testKeys(void);
 int getKeys(void);
 
-int main()
+int main(int argc, char *argv[], char* envp[])
 {
 	int last = -1;
 	int count = 0;
+	int i;
 	char cc;
 	extern struct obsData obsd;
 	setvbuf(stdout, NULL, _IONBF, 0);
 	char cmd[BUF_SIZE];
+	char* ptr;
 
-	printf("Starting\n");
+	if (argc > 1)
+	{
+		for (i = 1; i < argc; i++)
+		{
+			if (strncmp(argv[i], "-v", 2) == 0 ||
+				strncmp(argv[i], "\v", 2) == 0 ||
+				strncmp(argv[i], "--version", 9) == 0)
+			{
+				ptr = argv[0];
+				int c = 0;
+				while (c < strlen(argv[0]))
+				{
+					if (argv[0][c] == '\\' )
+					{
+						ptr = &argv[0][c+1];
+					}
+					c++;
+				}
+				printf("%s: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN );
+				exit(0);
+			}
+		}
+	}
 
 	// Set configurable parameters to defaults
 	localConfig.port_pulse = DEFAULT_PORT_PULSE;
@@ -224,7 +248,7 @@ simmgrInitialize(void)
 	memset(simmgr_shm, 0, sizeof(struct simmgr_shm));
 
 	// hdr
-	simmgr_shm->hdr.version = SIMMGR_VERSION;
+	sprintf_s(simmgr_shm->hdr.version, STR_SIZE, "%d.%d", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN );
 	simmgr_shm->hdr.size = sizeof(struct simmgr_shm);
 
 

@@ -57,7 +57,9 @@
 
 // Defines
 //
-#define SIMMGR_VERSION		2
+#define SIMMGR_VERSION_MAJ		2
+#define SIMMGR_VERSION_MIN		0
+
 #define STR_SIZE			64
 #define FILENAME_SIZE		256
 #define COMMENT_SIZE		1024
@@ -261,7 +263,7 @@ struct defibrillation
 
 struct hdr
 {
-	int	version;
+	char version[STR_SIZE];
 	int size;
 };
 
