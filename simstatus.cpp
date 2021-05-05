@@ -46,6 +46,12 @@ void makejson(string key, char *content)
 {
 	htmlReply += "\"" + key + "\":\"" + content + "\"";
 }
+void makejson(string key, int content)
+{
+	auto buf = to_string(content);
+
+	htmlReply += "\"" + key + "\":\"" + buf + "\"";
+}
 std::vector<std::string> explode(std::string const& s, char delim)
 {
 	std::vector<std::string> result;
@@ -485,6 +491,10 @@ simstatusHandleCommand(char *args)
 			makejson("ip_addr", simmgr_shm->server.ip_addr);
 			htmlReply += ",\n";
 			makejson("wifi_ip_addr", simmgr_shm->server.wifi_ip_addr);
+			htmlReply += ",\n";
+			makejson("port_pulse", PORT_PULSE);
+			htmlReply += ",\n";
+			makejson("port_status", PORT_STATUS);
 		}
 		/*
 		else if (key.compare("uptime") == 0)

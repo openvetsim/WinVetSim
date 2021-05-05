@@ -273,6 +273,8 @@ struct server
 	char ip_addr[STR_SIZE];		// ETH0 Network IP Address
 	char wifi_ip_addr[STR_SIZE];		// WiFi Network IP Address
 	char server_time[STR_SIZE];	// Linux date/timestamp
+	int pulsePort;					// IP Port number for Pulse Listen
+	int statusPort;					// IP port number for simstatus
 	ULONGLONG msec_time;				// msec timer.
 	int dbg1;
 	int dbg2;

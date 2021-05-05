@@ -142,9 +142,10 @@ int main(int argc, char *argv[], char* envp[])
 	{
 		for (i = 1; i < argc; i++)
 		{
-			if (strncmp(argv[i], "-v", 2) == 0 ||
-				strncmp(argv[i], "\v", 2) == 0 ||
-				strncmp(argv[i], "--version", 9) == 0)
+			if (strncmp(argv[i], "-v", 2) == 0 || strncmp(argv[i], "-V", 2) == 0 ||
+				strncmp(argv[i], "\\v", 2) == 0 || strncmp(argv[i], "\\V", 2) == 0 ||
+				strncmp(argv[i], "/v", 2) == 0 || strncmp(argv[i], "/V", 2) == 0 ||
+				strncmp(argv[i], "--version", 9) == 0 || strncmp(argv[i], "--Version", 9) == 0)
 			{
 				ptr = argv[0];
 				int c = 0;
@@ -158,6 +159,11 @@ int main(int argc, char *argv[], char* envp[])
 				}
 				printf("%s: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN );
 				exit(0);
+			}
+			else
+			{
+				printf("Unrecognized argumment: \"%s\"\n", argv[i]);
+				exit(-1);
 			}
 		}
 	}
