@@ -123,8 +123,6 @@ void SignalHandler(int signal)
 	stopPHPServer();
 }
 
-void getObsHandle(int first, const char *appName);
-int testKeys(void);
 int getKeys(void);
 
 int vetsim()
@@ -158,9 +156,6 @@ int vetsim()
 	printf("Hostname: %s\n", simmgr_shm->server.name);
 	sprintf_s(msg_buf, BUF_SIZE, "%s", "Done");
 	log_message("", msg_buf);
-
-	//testKeys();
-	//return(0);
 
 	if (startPHPServer())
 	{

@@ -50,7 +50,7 @@ int main(int argc, char* argv[], char* envp[])
 				strncmp(argv[i], "--version", 9) == 0 || strncmp(argv[i], "--Version", 9) == 0)
 			{
 				ptr = argv[0];
-				int c = 0;
+				size_t c = 0;
 				while (c < strlen(argv[0]))
 				{
 					if (argv[0][c] == '\\')

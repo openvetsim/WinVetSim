@@ -166,9 +166,16 @@ simstatusMain(void)
 				// Copy the first line by looking for first newline
 				for (i = 0; recvbuf[i]; i++)
 				{
-					if (recvbuf[i] == '\n' || recvbuf[i] == '\r')
+					if (i < sizeof(recvbuf))
+					{
+						if (recvbuf[i] == '\n' || recvbuf[i] == '\r')
+							break;
+						firstLine[i] = recvbuf[i];
+					}
+					else
+					{
 						break;
-					firstLine[i] = recvbuf[i];
+					}
 				}
 				firstLine[i] = 0;
 
@@ -208,9 +215,16 @@ simstatusMain(void)
 					
 					for ( i = iResult ; i >= 0 ; i-- )
 					{
-						if (recvbuf[i] == '\n' || recvbuf[i] == '\r')
+						if (i < sizeof(recvbuf))
 						{
-							args = &recvbuf[i+1];
+							if (recvbuf[i] == '\n' || recvbuf[i] == '\r')
+							{
+								args = &recvbuf[i + 1];
+								break;
+							}
+						}
+						else
+						{
 							break;
 						}
 					}
@@ -1442,7 +1456,7 @@ void replaceAll(char* args, size_t len, const char* needle, const char replace)
 
 	if (strlen(needle) == 1)
 	{
-		int i;
+		size_t i;
 		for (i = 0; i < len; i++)
 		{
 			if ( args[i] == needle[0] )

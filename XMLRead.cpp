@@ -28,7 +28,7 @@ XMLRead::open(const char* path)
     value[0] = 0;
     idx = 0;
     TCHAR* tchar = new TCHAR[strlen(path) + 4];
-    int i;
+    size_t i;
     for (i = 0; i <= strlen(path); i++)
     {
         tchar[i] = path[i];
@@ -88,7 +88,7 @@ XMLRead::open(const char* path)
         if (cptr2)
         {
             cptr2 += 2;
-            length = cptr2 - cptr1;
+            length = (int)(cptr2 - cptr1);
             memset(cptr1, ' ', length);
         }
     }
@@ -104,7 +104,7 @@ XMLRead::open(const char* path)
             if (cptr2)
             {
                 cptr2 += 3;
-                length = cptr2 - cptr1;
+                length = (int)(cptr2 - cptr1);
                 memset(cptr1, ' ', length);
             }
             else
@@ -150,7 +150,7 @@ XMLRead::getEntry(void)
                         break;
                     }
                 }
-                strncpy_s(XMLRead::name, cptr2, size_t(i-1));
+                strncpy_s(XMLRead::name, cptr2, size_t(i)-1);
                 XMLRead::name[i] = 0;
                 XMLRead::value[0] = 0;
                 XMLRead::type = XML_TYPE_END_ELEMENT;
@@ -338,6 +338,7 @@ void DisplayError(LPTSTR lpszFunction)
     LPVOID lpMsgBuf;
     LPVOID lpDisplayBuf;
     DWORD dw = GetLastError();
+    SIZE_T length;
 
     FormatMessage(
         FORMAT_MESSAGE_ALLOCATE_BUFFER |
@@ -349,26 +350,29 @@ void DisplayError(LPTSTR lpszFunction)
         (LPTSTR)&lpMsgBuf,
         0,
         NULL);
-
+    length = lstrlen((LPCTSTR)lpMsgBuf);
+    length += lstrlen((LPCTSTR)lpszFunction);
+    length += 40;  // account for format string
+    length *= sizeof(TCHAR);
     lpDisplayBuf =
         (LPVOID)LocalAlloc(LMEM_ZEROINIT,
-            (lstrlen((LPCTSTR)lpMsgBuf)
-                + lstrlen((LPCTSTR)lpszFunction)
-                + 40) // account for format string
-            * sizeof(TCHAR));
-
-    if (FAILED(StringCchPrintf((LPTSTR)lpDisplayBuf,
-        LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-        TEXT("%s failed with error code %d as follows:\n%s"),
-        lpszFunction,
-        dw,
-        lpMsgBuf)))
+            length );
+    if (lpDisplayBuf)
     {
-        printf("FATAL ERROR: Unable to output error code.\n");
+        if (FAILED(StringCchPrintf((LPTSTR)lpDisplayBuf,
+            LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+            TEXT("%s failed with error code %d as follows:\n%s"),
+            lpszFunction,
+            dw,
+            (LPTSTR)lpMsgBuf)))
+        {
+            printf("FATAL ERROR: Unable to output error code.\n");
+        }
+
+        _tprintf(TEXT("ERROR: %s\n"), (LPCTSTR)lpDisplayBuf);
+
+        
+        LocalFree(lpDisplayBuf);
     }
-
-    _tprintf(TEXT("ERROR: %s\n"), (LPCTSTR)lpDisplayBuf);
-
     LocalFree(lpMsgBuf);
-    LocalFree(lpDisplayBuf);
 }
