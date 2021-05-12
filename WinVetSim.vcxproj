@@ -154,7 +154,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -172,15 +172,25 @@
     <ClCompile Include="simstatus.cpp" />
     <ClCompile Include="simutil.cpp" />
     <ClCompile Include="VetSim.cpp" />
+    <ClCompile Include="vetsimTasks.cpp" />
     <ClCompile Include="WebSrv.cpp" />
     <ClCompile Include="XMLRead.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="llist.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="scenario.h" />
     <ClInclude Include="sendKeys.h" />
+    <ClInclude Include="version.h" />
     <ClInclude Include="vetsim.h" />
+    <ClInclude Include="vetsimTasks.h" />
     <ClInclude Include="XMLRead.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="WinVetSim.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="openvet.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

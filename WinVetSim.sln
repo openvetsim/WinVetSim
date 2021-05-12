@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.31205.134
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinVetSim", "WinVetSim.vcxproj", "{8065943C-5A97-4F38-A32D-9E5383FDEDB2}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WVS_Config", "..\WinVetTest1\WVS_Config\WVS_Config.vcxproj", "{335208A2-F198-4C56-8E98-43C7BE2F5BB2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,14 @@ Global
 		{8065943C-5A97-4F38-A32D-9E5383FDEDB2}.Release|x64.Build.0 = Release|x64
 		{8065943C-5A97-4F38-A32D-9E5383FDEDB2}.Release|x86.ActiveCfg = Release|Win32
 		{8065943C-5A97-4F38-A32D-9E5383FDEDB2}.Release|x86.Build.0 = Release|Win32
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Debug|x64.ActiveCfg = Debug|x64
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Debug|x64.Build.0 = Debug|x64
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Debug|x86.ActiveCfg = Debug|Win32
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Debug|x86.Build.0 = Debug|Win32
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Release|x64.ActiveCfg = Release|x64
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Release|x64.Build.0 = Release|x64
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Release|x86.ActiveCfg = Release|Win32
+		{335208A2-F198-4C56-8E98-43C7BE2F5BB2}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

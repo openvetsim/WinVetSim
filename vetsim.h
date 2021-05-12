@@ -22,8 +22,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <windows.h>
@@ -54,11 +52,11 @@
 #include <sstream>
 
 #include <sal.h>
+#include "vetsimTasks.h"
+#include "version.h"
 
 // Defines
 //
-#define SIMMGR_VERSION_MAJ		2
-#define SIMMGR_VERSION_MIN		0
 
 #define STR_SIZE			64
 #define FILENAME_SIZE		256
@@ -511,18 +509,10 @@ extern struct simmgr_shm* simmgr_shm;	// Data structure of the shared memory
 extern char* program_invocation_name;
 extern char* program_invocation_short_name;
 
-void start_task(const char *, std::function<void(void)> func);
-void timer_start(std::function<void(void)> func, unsigned int interval);
-
 void pulseProcessChild(void);
 int pulseTask(void);
 int phpTask(void);
 void phpTaskClose(void);
-
-int isServerRunning(void);
-int startPHPServer(void);
-void stopPHPServer(void);
-void simstatusMain(void);
 
 int scenario_main(void);
 

@@ -48,6 +48,134 @@ stopPHPServer(void)
 {
 	system("taskkill /FI \"WINDOWTITLE eq WinVetSim PHP\"");
 }
+
+char phpPath[FILENAME_MAX];
+
+int
+findPhpPath(void)
+{
+	HANDLE hFind;
+	WIN32_FIND_DATA FindFileData;
+
+	// Local copy is preferred
+	if ((hFind = FindFirstFile(L"./PHP8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "./PHP8.0/");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 64-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files/PHP/v8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files/PHP/v8.0");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 32-bit
+	if ((hFind = FindFirstFile(L"C:/Program Files (x86)/PHP/v8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files (x86)/PHP/8.0");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 64-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files/PHP/v7.4/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files/PHP/v7.4");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 32-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files (x86)/PHP/v7.4/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files (x86)/PHP/v7.4");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 64-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files/PHP/v7.3/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files/PHP/v7.3");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 32-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files (x86)/PHP/v7.3/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files (x86)/PHP/v7.3");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 64-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files/PHP/v7.2/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files/PHP/v7.2");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	// Shared 32-Bit
+	if ((hFind = FindFirstFile(L"C:/Program Files (x86)/PHP/v7.2/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	{
+		do {
+			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
+			{
+				sprintf_s(phpPath, "%s", "C:/Program Files (x86)/PHP/v7.2");
+				FindClose(hFind);
+				return (1);
+			}
+		} while (FindNextFile(hFind, &FindFileData));
+		FindClose(hFind);
+	}
+	return (0);
+}
 int startPHPServer(void )
 {
 	char commandLine[2048];
@@ -55,13 +183,19 @@ int startPHPServer(void )
 
 	if (isServerRunning() == 0)
 	{
+		if (findPhpPath() == 0)
+		{
+			printf("Cannot find PHP\n");
+			return ( rval );
+		}
 		printf("Starting PHP Server\n");
 
+		
 		// start [<title>] //d <path>] [program [<parameter>...]]
 		sprintf_s(commandLine, 2048, 
 		//		"start \"WinVetSim PHP\" /d  C:\\inetpub\\wwwroot /min \"C:\\Program Files\\PHP\\v7.4\\php.exe\" -S %s:%d ",
-				"start \"WinVetSim PHP\" /d  \"%s\" /min \"PHP8.0\\php.exe\" -S %s:%d ",
-			localConfig.html_path, PHP_SERVER_ADDR, PHP_SERVER_PORT );
+				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d ",
+			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
 		//printf("%s\n", commandLine);
 		system(commandLine);
 		Sleep(1000);

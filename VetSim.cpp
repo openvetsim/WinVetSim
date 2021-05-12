@@ -74,29 +74,6 @@ ScenarioState scenario_state = ScenarioState::ScenarioStopped;
 NibpState nibp_state = NibpState::NibpIdle;
 
 
-// Start a task to run every "interval" msec
-void timer_start(std::function<void(void)> func, unsigned int interval)
-{
-	std::thread([func, interval]() {
-		while (true)
-		{
-			func();
-			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-		}
-	}).detach();
-}
-
-// Start a task to run once. Might run forever.
-void start_task(const char *name, std::function<void(void)> func)
-{
-	std::thread::id id;
-
-	std::thread proc = std::thread([func]() {	func(); });
-	proc.detach();
-	id = proc.get_id();
-	cout << "Task Started: " << name << " " << id << endl;
-}
-
 void SignalHandler(int signal)
 {
 	switch (signal)
