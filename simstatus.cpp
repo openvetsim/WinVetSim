@@ -321,7 +321,6 @@ Accept - Encoding : gzip, deflate
 Accept - Language : en - US, en; q = 0.9, es - MX; q = 0.8, es; q = 0.7, ca; q = 0.6, mg; q = 0.5
 Cookie: userID = 6; PHPSESSID = jtha8dsa284hes9ehtlvj3bpnh
 
-
 */
 void
 sendNotFound(char *path)
@@ -347,6 +346,7 @@ struct argument
 	string value;
 };
 
+char defaultArgs[] = "status=1";
 
 int
 simstatusHandleCommand(char *args)
@@ -368,6 +368,10 @@ simstatusHandleCommand(char *args)
 	std::vector<std::string> v;
 
 	map<int, argument> argList;
+	if (strlen(args) == 0)
+	{
+		args = defaultArgs;
+	}
 	char* keyP = &args[0];
 	char* valP = strchr(args, '=');
 	char* nextP = strchr(args, '&');
@@ -413,7 +417,7 @@ simstatusHandleCommand(char *args)
 	}
 	//cout << endl;
 
-	//get_date(buffer);
+	//get_date(buffer, sizeof(buffer));
 	//sprintf_s(buffer, sizeof(buffer), "Jan 01, 2001");
 	//makejson("date", buffer);
 	//htmlReply += ",\n    ";
@@ -523,13 +527,14 @@ simstatusHandleCommand(char *args)
 				makejson("uptime", buffer);
 			}
 		}
+		*/
 		else if (key.compare("date") == 0)
 		{
-			get_date(buffer);
+			get_date(buffer, sizeof(buffer));
 			makejson("date", buffer);
 			//makejson("date", simmgr_shm->server.server_time );
 		}
-		*/
+		
 		else if (key.compare("ip") == 0)
 		{
 			makejson("ip_addr", simmgr_shm->server.ip_addr);
@@ -573,7 +578,6 @@ simstatusHandleCommand(char *args)
 			htmlReply += ",\n    ";
 			sts = 0;
 
-
 			if (v[1].compare("cardiac") == 0)
 			{
 				printf("Calling Cardiac Parse, \"%s\", \"%s\"\n", v[2].c_str(), value.c_str());
@@ -608,7 +612,6 @@ simstatusHandleCommand(char *args)
 			}
 			else if (v[1].compare("telesim") == 0)
 			{
-				//printf("telesim_parse(%s )\n", value.c_str() );
 				sts = telesim_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.telesim);
 			}
 			else if (v[1].compare("vocals") == 0)
@@ -763,7 +766,11 @@ simstatusHandleCommand(char *args)
 	}
 
 	htmlReply += "\n}\n";
-	releaseLock(ss_iiLockTaken);
+	if (ss_iiLockTaken)
+	{
+		releaseLock(ss_iiLockTaken);
+	}
+	
 	ss_iiLockTaken = 0;
 	return (0);
 }

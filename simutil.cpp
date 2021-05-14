@@ -182,13 +182,13 @@ do_command_read(const char* cmd_str, char* buffer, int max_len)
 	return (cp);
 }
 void
-get_date(char* buffer)
+get_date(char* buffer, int maxLen)
 {
 	struct tm newtime;
-	char am_pm[] = "AM";
 	__time64_t long_time;
-	char timebuf[26];
+	char timebuf[64];
 	errno_t err;
+	char* ptr;
 
 	// Get time as 64-bit integer.
 	_time64(&long_time);
@@ -199,21 +199,23 @@ get_date(char* buffer)
 		printf("Invalid argument to _localtime64_s.");
 		exit(1);
 	}
-	if (newtime.tm_hour > 12)        // Set up extension.
-		strcpy_s(am_pm, sizeof(am_pm), "PM");
-	if (newtime.tm_hour > 12)        // Convert from 24-hour
-		newtime.tm_hour -= 12;        // to 12-hour clock.
-	if (newtime.tm_hour == 0)        // Set hour to 12 if midnight.
-		newtime.tm_hour = 12;
-
 	// Convert to an ASCII representation.
-	err = asctime_s(timebuf, 26, &newtime);
+	err = asctime_s(timebuf, 64, &newtime);
 	if (err)
 	{
 		printf("Invalid argument to asctime_s.");
 		exit(1);
 	}
-	printf("%.19s %s\n", timebuf, am_pm);
+	ptr = timebuf;
+	while (*ptr)
+	{
+		if (*ptr == '\n')
+		{
+			*ptr = 0;
+		}
+		ptr++;
+	}
+	sprintf_s(buffer, maxLen, "%s", timebuf );
 }
 
 char eth0_ip[512] = { 0, };
@@ -321,7 +323,7 @@ takeInstructorLock()
 	int trycount = 0;
 	int sts;
 
-	while (trycount < 50)
+	while (trycount < 5)
 	{
 		sts = WaitForSingleObject(simmgr_shm->instructor.sema, INFINITE);
 		switch (sts)

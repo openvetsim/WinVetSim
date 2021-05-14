@@ -19,14 +19,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-
+#define DOING_WINDOWS
+#ifdef DOING_WINDOWS
 // Windows Header Files
-#include <windows.h>
 #include <stdlib.h>
 #include <string.h>
 #include <tchar.h>
 #include <strsafe.h>
-//#include <afxwin.h>
+#include <afxwin.h>
 
 
 // C RunTime Header Files
@@ -134,10 +134,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UpdateWindow(hWnd);
 
 	//CMenu menu;
-	//VERIFY(menu.LoadMenu(IDR_MENU1));
+	//ASSERT(menu.LoadMenu(IDR_MENU1));
 	//CMenu* pPopup = menu.GetSubMenu(0);
 	//ASSERT(pPopup != NULL);
-	//pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, point.x, point.y, AfxGetMainWnd());
+	//pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, 0, 0, AfxGetMainWnd());
 
 	start_task("VetSim", vetsim );
 
@@ -233,15 +233,7 @@ void ErrorExit(LPCTSTR lpszFunction)
 	LocalFree(lpMsgBuf);
 	LocalFree(lpDisplayBuf);
 	ExitProcess(dw);
-}
-
 	/*
-	int i;
-	wchar_t* ptr;
-	int argc;
-	LPWSTR* argv;
-
-
 	argv = CommandLineToArgvW(GetCommandLine(), &argc);
 	if (argc > 1)
 	{
@@ -275,5 +267,47 @@ void ErrorExit(LPCTSTR lpszFunction)
 	vetsim();
 	
 	return 0;
+	*/
 }
-*/
+#else
+#include "vetsim.h"
+int main(int argc, char *argv[] )
+{
+	int i;
+	char *ptr;
+
+	if (argc > 1)
+	{
+		for (i = 1; i < argc; i++)
+		{
+			if (strncmp(argv[i], "-v", 2) == 0 || strncmp(argv[i], "-V", 2) == 0 ||
+				strncmp(argv[i], "\\v", 2) == 0 || strncmp(argv[i], "\\V", 2) == 0 ||
+				strncmp(argv[i], "/v", 2) == 0 || strncmp(argv[i], "/V", 2) == 0 ||
+				strncmp(argv[i], "--version", 9) == 0 || strncmp(argv[i], "--Version", 9) == 0)
+			{
+				ptr = argv[0];
+				size_t c = 0;
+				while (c < strlen(argv[0]))
+				{
+					if (argv[0][c] == '\\')
+					{
+						ptr = &argv[0][c + 1];
+					}
+					c++;
+				}
+				printf("%s: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN);
+				exit(0);
+			}
+			else
+			{
+				printf("Unrecognized argumment: \"%s\"\n", argv[i]);
+				exit(-1);
+			}
+		}
+	}
+	vetsim();
+	
+	return 0;
+}
+
+#endif

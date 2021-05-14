@@ -128,8 +128,6 @@ int vetsim()
 	start_task("pluseTask", pulseTask);
 	start_task("simstatusMain", simstatusMain);
 
-	
-
 	printf("Hostname: %s\n", simmgr_shm->server.name);
 	sprintf_s(msg_buf, BUF_SIZE, "%s", "Done");
 	log_message("", msg_buf);

@@ -24,7 +24,6 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <windows.h>
 
 #pragma comment(lib, "Ws2_32.lib") 
 
@@ -449,7 +448,7 @@ void log_message(const char* filename, const char* message);
 void log_messaget(const char* filename, TCHAR* message);
 char* nth_occurrence(char* haystack, char* needle, int nth);
 char* do_command_read(const char* cmd_str, char* buffer, int max_len);
-void get_date(char* buffer);
+void get_date(char* buffer, int maxLen);
 char* getETH0_IP();
 char* getWIFI_IP();
 #ifndef WIN32

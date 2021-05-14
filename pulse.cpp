@@ -84,7 +84,7 @@ unsigned int lastManualBreath = 0;
 void set_pulse_rate(int bpm);
 void set_breath_rate(int bpm);
 void calculateVPCFreq(void);
-
+void sendStatusPort(int listener);
 /* struct to hold data to be passed to a thread
    this shows how multiple data items can be passed to a thread */
 struct listener
@@ -139,73 +139,80 @@ ULONGLONG pulseInterval = 0;
 static void
 pulse_beat_handler(void)
 {
-	pulseSema.lock();
+	//pulseSema.lock();
 	if (currentPulseRate > 0)
 	{
-		if (beatPhase-- <= 0)
+		if ((vpcType > 0) || (afibActive))
 		{
-			if (vpcState > 0)
+			if (beatPhase-- <= 0)
 			{
-				// VPC Injection
-				simmgr_shm->status.cardiac.pulseCountVpc++;
-				vpcState--;
-				switch (vpcState)
+				if (vpcState > 0)
 				{
-				case 0: // Last VPC
-					switch (simmgr_shm->status.cardiac.vpc_count)
+					// VPC Injection
+					simmgr_shm->status.cardiac.pulseCountVpc++;
+					vpcState--;
+					switch (vpcState)
 					{
-					case 0:	// This should only occur if VPCs were just disabled.
-					case 1:
-					default:	// Should not happen
-						beatPhase = 13;
+					case 0: // Last VPC
+						switch (simmgr_shm->status.cardiac.vpc_count)
+						{
+						case 0:	// This should only occur if VPCs were just disabled.
+						case 1:
+						default:	// Should not happen
+							beatPhase = 13;
+							break;
+						case 2:
+							beatPhase = 16;
+							break;
+						case 3:
+							beatPhase = 19;
+							break;
+						}
 						break;
-					case 2:
-						beatPhase = 16;
-						break;
-					case 3:
-						beatPhase = 19;
-						break;
-					}
-					break;
-				default:
-					beatPhase = 6;
-					break;
-				}
-			}
-			else
-			{
-				// Normal Cycle
-				simmgr_shm->status.cardiac.pulseCount++;
-				if (afibActive)
-				{
-					// Next beat phase is between 50% and 200% of standard. 
-					// Calculate a random from 0 to 14 and add to 5
-					beatPhase = 5 + (rand() % 14);
-				}
-				else if ((vpcType > 0) && (currentVpcFreq > 0))
-				{
-					if (vpcFrequencyIndex++ >= VPC_ARRAY_LEN)
-					{
-						vpcFrequencyIndex = 0;
-					}
-					if (vpcFrequencyArray[vpcFrequencyIndex] > 0)
-					{
-						vpcState = simmgr_shm->status.cardiac.vpc_count;
+					default:
 						beatPhase = 6;
-					}
-					else
-					{
-						beatPhase = 9;
+						break;
 					}
 				}
 				else
 				{
-					beatPhase = 9;	// Preset for "normal"
+					// Normal Cycle
+					simmgr_shm->status.cardiac.pulseCount++;
+					if (afibActive)
+					{
+						// Next beat phase is between 50% and 200% of standard. 
+						// Calculate a random from 0 to 14 and add to 5
+						beatPhase = 5 + (rand() % 14);
+					}
+					else if ((vpcType > 0) && (currentVpcFreq > 0))
+					{
+						if (vpcFrequencyIndex++ >= VPC_ARRAY_LEN)
+						{
+							vpcFrequencyIndex = 0;
+						}
+						if (vpcFrequencyArray[vpcFrequencyIndex] > 0)
+						{
+							vpcState = simmgr_shm->status.cardiac.vpc_count;
+							beatPhase = 6;
+						}
+						else
+						{
+							beatPhase = 9;
+						}
+					}
+					else
+					{
+						beatPhase = 9;	// Preset for "normal"
+					}
 				}
 			}
 		}
+		else
+		{
+			simmgr_shm->status.cardiac.pulseCount++;
+		}
 	}
-	pulseSema.unlock();
+	//pulseSema.unlock();
 }
 static void
 breath_beat_handler(void)
@@ -260,6 +267,7 @@ calculateVPCFreq(void)
  * ARGUMENTS:
  *		rate	- Rate in Beats per minute
  *		isCaridac	- Set to IS_CARDIAC for the cardiac timer
+ *		isFib		- Set if 10 phase timer is needed
  *
  * DESCRIPTION:
  *		Calculate and set the timer, used for both heart and breath.
@@ -268,7 +276,7 @@ calculateVPCFreq(void)
  *		Called with pulseSema or breathSema held
 */
 void
-resetTimer(int rate, int isCardiac)
+resetTimer(int rate, int isCardiac, int isFib)
 {
 	ULONGLONG wait_time_msec;
 	ULONGLONG remaining;
@@ -282,7 +290,7 @@ resetTimer(int rate, int isCardiac)
 
 	// Note that the heart beat handler is called 10 times per interval, 
 	// to provide VPC and AFIB functions
-	if (isCardiac)
+	if (isFib)
 	{
 		sec_per_beat = sec_per_beat / 10;
 	}
@@ -334,8 +342,14 @@ set_pulse_rate(int bpm)
 	{
 		bpm = 60;
 	}
-
-	resetTimer(bpm, IS_CARDIAC);
+	if ((vpcType > 0) || (afibActive))
+	{
+		resetTimer(bpm, IS_CARDIAC, 1 );
+	}
+	else
+	{
+		resetTimer(bpm, IS_CARDIAC, 0);
+	}
 }
 
 // restart_breath_timer is called when a manual respiration is flagged. 
@@ -366,7 +380,7 @@ set_breath_rate(int bpm)
 		bpm = 60;
 	}
 
-	resetTimer(bpm, NOT_CARDIAC);
+	resetTimer(bpm, NOT_CARDIAC, 0 );
 }
 HANDLE pusleTimerH;
 HANDLE bcastTimerH;
@@ -488,6 +502,8 @@ pulseTask(void )
 						client_addr.sa_data[4] & 0xff,
 						client_addr.sa_data[5] & 0xff
 					);
+					// Send the Status Port Number to the listener
+					sendStatusPort(i);
 					break;
 				}
 			}
@@ -501,6 +517,35 @@ pulseTask(void )
 	sprintf_s(p_msg, BUF_SIZE, "simpulse terminates");
 	log_message("", p_msg);
 	exit(0);
+}
+
+/*
+ * FUNCTION: sendStatusPort
+ *
+ * ARGUMENTS:
+ *		listener - Index of listener
+ *
+ * RETURNS:
+ *		Never
+ *
+ * DESCRIPTION:
+ *		Send the port number to the indicated listener.
+*/
+void
+sendStatusPort(int listener)
+{
+	SOCKET fd;
+	size_t len;
+	char pbuf[64];
+
+	sprintf_s(pbuf, "statusPort:%d", PORT_STATUS);
+	len = strlen(pbuf);
+
+	if (listeners[listener].allocated == 1)
+	{
+		fd = listeners[listener].cfd;
+		len = send(fd, pbuf, len, 0);
+	}
 }
 
 /*
@@ -566,27 +611,29 @@ void
 pulseTimer(void)
 {
 	ULONGLONG now;
+	ULONGLONG now2;
 	while (1)
 	{
 		Sleep(1);
 		now = simmgr_shm->server.msec_time;
 		if (nextPulseTime <= now)
 		{
-			nextPulseTime += pulseInterval;
-			if (nextPulseTime <= now)
-			{
-				nextPulseTime = now + pulseInterval;
-			}
 			pulse_beat_handler();
+			nextPulseTime += pulseInterval;
+			now2 = simmgr_shm->server.msec_time;
+			if (nextPulseTime <= (now2+1))
+			{
+				nextPulseTime = now2;
+			}
 		}
 		if (nextBreathTime <= now)
 		{
+			breath_beat_handler();
 			nextBreathTime += breathInterval;
 			if (nextBreathTime <= now)
 			{
 				nextBreathTime = now + breathInterval;
 			}
-			breath_beat_handler();
 		}
 	}
 }
@@ -594,6 +641,8 @@ void
 pulseBroadcastLoop(void)
 {
 	int count;
+	int portUpdateLoops = 0;
+	char pbuf[64];
 	unsigned int last_pulse = simmgr_shm->status.cardiac.pulseCount;
 	unsigned int last_pulseVpc = simmgr_shm->status.cardiac.pulseCountVpc;
 	unsigned int last_breath = simmgr_shm->status.respiration.breathCount;
@@ -602,6 +651,14 @@ pulseBroadcastLoop(void)
 	while (1)
 	{
 		Sleep(10);
+		
+		if (portUpdateLoops++ > 500)
+		{
+			sprintf_s(pbuf, "statusPort:%d", PORT_STATUS);
+			broadcast_word(pbuf);
+			portUpdateLoops = 0;
+		}
+		
 		if (last_pulse != simmgr_shm->status.cardiac.pulseCount)
 		{
 			last_pulse = simmgr_shm->status.cardiac.pulseCount;
@@ -683,15 +740,21 @@ pulseProcessChild(void)
 			currentVpcFreq = simmgr_shm->status.cardiac.vpc_freq;
 			vpcType = simmgr_shm->status.cardiac.vpc_type;
 			calculateVPCFreq();
+			set_pulse_rate(simmgr_shm->status.cardiac.rate);
+
 		}
 
-		if (strncmp(simmgr_shm->status.cardiac.rhythm, "afib", 4) == 0)
+		if (strncmp(simmgr_shm->status.cardiac.rhythm, "afib", 4) == 0 &&
+			! afibActive )
 		{
 			afibActive = 1;
+			set_pulse_rate(simmgr_shm->status.cardiac.rate);
 		}
-		else
+		else if (afibActive )
 		{
 			afibActive = 0;
+			set_pulse_rate(simmgr_shm->status.cardiac.rate);
+
 		}
 		
 		if (lastManualBreath != simmgr_shm->status.respiration.manual_count)

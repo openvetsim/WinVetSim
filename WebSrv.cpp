@@ -188,7 +188,7 @@ int startPHPServer(void )
 			printf("Cannot find PHP\n");
 			return ( rval );
 		}
-		printf("Starting PHP Server\n");
+		printf("Starting PHP Server %s\n", phpPath );
 
 		
 		// start [<title>] //d <path>] [program [<parameter>...]]
@@ -196,7 +196,6 @@ int startPHPServer(void )
 		//		"start \"WinVetSim PHP\" /d  C:\\inetpub\\wwwroot /min \"C:\\Program Files\\PHP\\v7.4\\php.exe\" -S %s:%d ",
 				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d ",
 			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
-		//printf("%s\n", commandLine);
 		system(commandLine);
 		Sleep(1000);
 		if (isServerRunning() != 0 )
