@@ -19,8 +19,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-#define DOING_WINDOWS
-#ifdef DOING_WINDOWS
+
+#ifdef NDEBUG
 // Windows Header Files
 #include <stdlib.h>
 #include <string.h>
