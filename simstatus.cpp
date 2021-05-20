@@ -31,12 +31,8 @@ void sendQuickStatus(void);
 void sendSimctrData(void);
 void replaceAll(char* args, size_t len, const char* needle, const char replace);
 
-struct paramCmds
-{
-	char cmd[16];
-};
-
 string htmlReply;
+int closeFlag = 0;
 
 void makejson(string key, string content)
 {
@@ -74,13 +70,6 @@ releaseLock(int taken)
 	}
 }
 
-struct paramCmds paramCmds[] =
-{
-	{ "check", },
-	{ "uptime", },
-	{ "date", },
-	{ "",  }
-};
 int debug = 0;
 
 #define BUF_SIZE	2048
@@ -303,6 +292,13 @@ simstatusMain(void)
 			}
 			closesocket(cfd);
 		}
+		if (closeFlag)
+		{
+			// SHutdown the PHP Server
+			stopPHPServer();
+			// Close the application
+			ExitProcess(0);
+		}
 	}
 }
 /*
@@ -444,6 +440,21 @@ simstatusHandleCommand(char *args)
 			userid = atoi(value.c_str());
 			makejson(key, value);
 			htmlReply += ",\n";
+		}
+		else if (key.compare("close") == 0)
+		{
+			i = atoi(value.c_str());
+			if (i == 565)
+			{
+				makejson(key, value);
+				htmlReply += ",\n";
+				closeFlag = 1;
+			}
+			else
+			{
+				makejson("error", "bad param");
+				htmlReply += ",\n";
+			}
 		}
 	}
 
