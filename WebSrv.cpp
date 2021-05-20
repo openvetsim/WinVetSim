@@ -193,7 +193,6 @@ int startPHPServer(void )
 		
 		// start [<title>] //d <path>] [program [<parameter>...]]
 		sprintf_s(commandLine, 2048, 
-		//		"start \"WinVetSim PHP\" /d  C:\\inetpub\\wwwroot /min \"C:\\Program Files\\PHP\\v7.4\\php.exe\" -S %s:%d ",
 				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d ",
 			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
 		system(commandLine);

@@ -21,7 +21,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
-
+#include <WinSDKVer.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -68,7 +68,7 @@
 #define DEFAULT_PORT_STATUS			40845	// Note: If changes, must also change in Sim-II
 #define DEFAULT_PHP_SERVER_PORT		8081
 #define DEFAULT_PHP_SERVER_ADDRESS	"127.0.0.1"
-#define DEFAULT_LOG_NAME			"vetsim.log"
+#define DEFAULT_LOG_NAME			"simlogs/vetsim.log"
 #define DEFAULT_HTML_PATH			"html"
 
 struct localConfiguration
@@ -170,6 +170,8 @@ struct scenario
 	char clockDisplay[STR_SIZE];
 	char state[STR_SIZE];
 	char scene_name[STR_SIZE];	// Currently running scene
+	char error_message[STR_SIZE]; // From scenario process, on failure
+	int error_flag;				  // Set to indicate error
 	int scene_id;				// Currently running scene
 	int record;					// Set in initiator section to start/stop video recording
 	time_t startTime;
@@ -510,8 +512,6 @@ extern char* program_invocation_short_name;
 
 void pulseProcessChild(void);
 int pulseTask(void);
-int phpTask(void);
-void phpTaskClose(void);
 
 int scenario_main(void);
 
@@ -552,5 +552,5 @@ void strToLower(char* buf);
 
 // In simmgrVideo
 int initOBSSHM(int create);
-void recordStartStop(int record);
+int recordStartStop(int record);
 int getVideoFileCount(void);

@@ -234,6 +234,10 @@ scenario_main(void)
 		{
 			fprintf(stderr, "%s\n", s_msg);
 		}
+		takeInstructorLock();
+		sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "stopped");
+		simmgr_shm->instructor.scenario.error_flag = 1;
+		releaseInstructorLock();
 		return (-1);
 	}
 
@@ -277,6 +281,8 @@ scenario_main(void)
 			sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s", "No Start Scene");
 			takeInstructorLock();
 			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
+			sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s", "No Start Scene");
+			simmgr_shm->instructor.scenario.error_flag = 1;
 			releaseInstructorLock();
 		}
 		errCount++;
@@ -1741,12 +1747,13 @@ readScenario(const char* name)
 	char filename[1400];
 	extern char sessionsPath[];
 
-	sprintf_s(sessionsPath, 1088, "C:\\inetpub\\wwwroot\\scenarios");
+	sprintf_s(sessionsPath, 1088, "%s\\scenarios", localConfig.html_path );
 	sprintf_s(filename, 1400, "%s\\%s\\main.xml", sessionsPath, name);
 	sts = xmlr.open(filename);
 	if (sts)
 	{
 		printf("Failure on read of XML File \"%s\"\n", filename);
+		snprintf(simmgr_shm->status.scenario.error_message, STR_SIZE, "Failure on read of XML File \"%s\"\n", filename);
 		return (-1);
 	}
 	while ( xmlr.getEntry() == 0 )

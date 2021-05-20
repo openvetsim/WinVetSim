@@ -1,5 +1,5 @@
 /*
- * VetSim.cpp
+ * main.cpp
  *
  * SimMgr applicatiopn
  *
@@ -20,6 +20,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+
+#include <WinSDKVer.h>
+#define _WIN32_WINNT _WIN32_WINNT_MAXVER
 #ifdef NDEBUG
 // Windows Header Files
 #include <stdlib.h>
@@ -88,7 +91,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (!RegisterClassEx(&wcex))
 	{
-		DWORD dwrd;
 		LPCTSTR s = _T("RegisterClassEx");
 		ErrorExit(s);
 
@@ -172,15 +174,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 
-		// Here your application is laid out.
-		// For this introduction, we just print out "Hello, Windows desktop!"
-		// in the top left corner.
+		// Print greeting in the top left corner.
 		TextOut(hdc,
-			5, 5,
-			greeting, _tcslen(greeting));
+			5, 
+			5,
+			greeting, 
+			(int)_tcslen(greeting));
 		TextOut(hdc,
-			5, 20,
-			version, _tcslen(greeting));
+			5, 
+			20,
+			version, 
+			(int)_tcslen(greeting));
 		// End application-specific layout section.
 
 		EndPaint(hWnd, &ps);
@@ -189,7 +193,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		hdc = BeginPaint(hWnd, &ps);
 		TextOut(hdc,
 			5, 5,
-			leaving, _tcslen(leaving));
+			leaving, (int)_tcslen(leaving));
 		EndPaint(hWnd, &ps);
 		stopPHPServer();
 		PostQuitMessage(0);

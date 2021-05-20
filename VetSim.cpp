@@ -209,6 +209,8 @@ simmgrInitialize(void)
 	sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", "default");
 	sprintf_s(simmgr_shm->status.scenario.state, STR_SIZE, "%s", "Stopped");
 	simmgr_shm->status.scenario.record = 0;
+	sprintf_s(simmgr_shm->status.scenario.error_message, STR_SIZE, "%s", "Stopped");
+	simmgr_shm->status.scenario.error_flag = 0;
 
 	// instructor/sema
 
@@ -223,6 +225,8 @@ simmgrInitialize(void)
 	sprintf_s(simmgr_shm->instructor.scenario.active, STR_SIZE, "%s", "");
 	sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "");
 	simmgr_shm->instructor.scenario.record = -1;
+	sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s", "");
+	simmgr_shm->instructor.scenario.error_flag = -1;
 
 	// Log File
 	simmgr_shm->logfile.sema = CreateMutex(
@@ -1208,7 +1212,12 @@ scan_commands(void)
 		simmgr_shm->status.scenario.record = simmgr_shm->instructor.scenario.record;
 		simmgr_shm->instructor.scenario.record = -1;
 	}
-
+	if (simmgr_shm->instructor.scenario.error_flag >= 0)
+	{
+		simmgr_shm->status.scenario.error_flag = simmgr_shm->instructor.scenario.error_flag;
+		sprintf_s(simmgr_shm->status.scenario.error_message, "%s", simmgr_shm->instructor.scenario.error_message);
+		simmgr_shm->instructor.scenario.error_flag = -1;
+	}
 	if (strlen(simmgr_shm->instructor.scenario.state) > 0)
 	{
 		strToLower(simmgr_shm->instructor.scenario.state);
@@ -1941,6 +1950,7 @@ start_scenario(void)
 	int fileCountBefore;
 	int fileCountAfter;
 	errno_t err;
+	int sts;
 
 	sprintf_s(c_msgbuf, BUF_SIZE, "Start Scenario Request: %s", simmgr_shm->status.scenario.active );
 	log_message("", c_msgbuf);
@@ -1952,7 +1962,13 @@ start_scenario(void)
 	{
 		fileCountBefore = getVideoFileCount();
 		printf("File Count Before is %d\n", fileCountBefore);
-		recordStartStop(1);
+		sts = recordStartStop(1);
+		if (sts != 0)
+		{
+			sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "OBS is not running");
+			simmgr_shm->status.scenario.error_flag = 1;
+			updateScenarioState(ScenarioState::ScenarioRunning);
+		}
 		while ((fileCountAfter = getVideoFileCount()) == fileCountBefore)
 		{
 			int cc;
@@ -1978,9 +1994,8 @@ start_scenario(void)
 
 	(void)simlog_create();
 	// start the new scenario
-	start_task("scenario_main", scenario_main);
 	
-	sprintf_s(msg_buf, BUF_SIZE, "Start Scenario: %s Pid is %d", simmgr_shm->status.scenario.active, scenarioPid);
+	sprintf_s(msg_buf, BUF_SIZE, "Start Scenario: %s", simmgr_shm->status.scenario.active);
 	log_message("", msg_buf);
 	sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", simmgr_shm->status.scenario.active);
 
@@ -1988,8 +2003,11 @@ start_scenario(void)
 	sprintf_s(simmgr_shm->status.scenario.runtimeAbsolute, STR_SIZE, "%s", "00:00:00");
 	sprintf_s(simmgr_shm->status.scenario.runtimeScenario, STR_SIZE, "%s", "00:00:00");
 	sprintf_s(simmgr_shm->status.scenario.runtimeScene, STR_SIZE, "%s", "00:00:00");
+	simmgr_shm->status.scenario.error_flag = 0;
 
 	updateScenarioState(ScenarioState::ScenarioRunning);
+
+	start_task("scenario_main", scenario_main);
 
 	return (0);
 }

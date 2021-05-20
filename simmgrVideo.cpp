@@ -86,7 +86,7 @@ getObsHandle(const char *appName )
 	}
 }
 
-void
+int
 recordStartStop(int record)
 {
 	//BOOL sts;
@@ -96,8 +96,7 @@ recordStartStop(int record)
 
 	if (obsd.obsWnd == NULL)
 	{
-		printf("No OBS Found\n");
-		return;
+		return ( -1 );
 	}
 	if (record)
 	{
@@ -138,7 +137,8 @@ getLatestFile(char* rname, char* dir)
 	unsigned long long fileDate = 0;
 	unsigned long long latestDate = 0;
 
-	wchar_t fname[512] = L"C:/inetpub/wwwroot/simlogs/video/*.mkv";
+	wchar_t fname[MAX_PATH];
+	swprintf_s(fname, MAX_PATH, L"%S\\simlogs\\video\\*.mkv", localConfig.html_path );
 	wchar_t latestFname[MAX_PATH] = { 0, };
 
 	HANDLE hFind;
@@ -248,7 +248,8 @@ getVideoFileCount(void)
 	int file_count = 0;
 	HANDLE hFind;
 	WIN32_FIND_DATA FindFileData;
-	wchar_t name[] = L"C:/inetpub/wwwroot/simlogs/video/*.mkv";
+	wchar_t name[MAX_PATH];
+	swprintf_s(name, L"%S\\simlogs\\video\\*.mkv", localConfig.html_path);
 
 	if ((hFind = FindFirstFile(name, &FindFileData)) != INVALID_HANDLE_VALUE) {
 		do {

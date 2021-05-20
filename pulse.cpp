@@ -535,11 +535,11 @@ void
 sendStatusPort(int listener)
 {
 	SOCKET fd;
-	size_t len;
+	int len;
 	char pbuf[64];
 
 	sprintf_s(pbuf, "statusPort:%d", PORT_STATUS);
-	len = strlen(pbuf);
+	len = (int)strlen(pbuf);
 
 	if (listeners[listener].allocated == 1)
 	{

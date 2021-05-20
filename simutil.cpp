@@ -102,7 +102,7 @@ void log_message(const char* filename, const char* message)
 	}
 	else
 	{
-		err = fopen_s(&logfile, DEFAULT_LOG_NAME, "a");
+		err = fopen_s(&logfile, LOG_NAME, "a");
 	}
 	if (logfile)
 	{
@@ -122,7 +122,7 @@ void log_messaget(const char* filename, TCHAR* message)
 	}
 	else
 	{
-		err = fopen_s(&logfile, DEFAULT_LOG_NAME, "a");
+		err = fopen_s(&logfile, LOG_NAME, "a");
 	}
 	if (logfile)
 	{
@@ -497,73 +497,11 @@ void signalHandler(int signum)
 
 	// cleanup and close up stuff here
 	// terminate program
-	// phpTaskClose();
 	CloseHandle(php_pi.hProcess);
 	CloseHandle(php_pi.hThread);
 
 	exit(signum);
 
-}
-
-// Run the PHP Built-in Web Server
-// TODO: The port and directory should be configurable
-
-//FILE* phpProc;
-
-
-int
-phpTask(void)
-{
-	int sts;
-
-	//LPWSTR cmd = ;
-
-	ZeroMemory(&php_si, sizeof(php_si));
-	php_si.cb = sizeof(php_si);
-	ZeroMemory(&php_pi, sizeof(php_pi));
-
-	// cout << "cmd:\"" << cmd << "\"\n";
-	sts = _chdir("C:\\inetpub\\wwwroot");
-
-	if (sts != 0)
-	{
-		printf("chdir fails %d: ", sts );
-		cout << GetLastErrorAsString() << "\n";
-	}
-	else
-	{
-		sts = CreateProcess(NULL,   // lpApplicationName 
-			(LPWSTR)"\"c:\\Program Files\\PHP\\v7.0\\php.exe -S localhost:80\"",        // Command line
-							NULL,           // Process handle not inheritable
-							NULL,           // Thread handle not inheritable
-							FALSE,          // Set handle inheritance to FALSE
-							0,              // No creation flags
-							NULL,           // Use parent's environment block
-							NULL,           // Use parent's starting directory 
-							&php_si,            // Pointer to STARTUPINFO structure
-							&php_pi);
-		if (!sts ) 
-		{
-			cout << "CreateProcess Fails : "  << GetLastErrorAsString() << "\n" << "\n";
-		}
-		else
-		{
-			cout << "phpTask started\n";
-			signal(SIGINT, signalHandler);
-			signal(SIGTERM, signalHandler);
-		}
-
-	}
-	return ( 0 );
-}
-
-void
-phpTaskClose(void)
-{
-	printf("phpTaskClose called\n");
-
-	CloseHandle(php_pi.hProcess);
-	CloseHandle(php_pi.hThread);
 }
 
 LARGE_INTEGER

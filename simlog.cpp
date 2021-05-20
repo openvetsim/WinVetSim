@@ -22,55 +22,15 @@
 
 /*
  *
- * The log file is created in the directory /var/www/html/simlogs
+ * The log file is created in the user's temporary directory
  * The filename is created from the scenario name and start time
  */
 #include "vetsim.h"
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/mman.h>
-#include "../include/simmgr.h"
-#include <sys/types.h>
-#include <pwd.h>
-#include <grp.h>
-*/
-#define SIMLOG_DIR		"C:/inetpub/wwwroot/simlogs"
+
 #define SIMLOG_NAME_LENGTH 128
 #define MAX_TIME_STR	24
 #define MAX_LINE_LEN	512
 
-/*
-int do_chown(const char* file_path,
-	const char* user_name,
-	const char* group_name)
-{
-	uid_t          uid;
-	gid_t          gid;
-	struct passwd* pwd;
-	struct group* grp;
-
-	pwd = getpwnam(user_name);
-	if (pwd == NULL) {
-		return (-1);
-	}
-	uid = pwd->pw_uid;
-
-	grp = getgrnam(group_name);
-	if (grp == NULL) {
-		return (-2);
-	}
-	gid = grp->gr_gid;
-
-	if (chown(file_path, uid, gid) == -1) {
-		return (-3);
-	}
-	return (0);
-}
-*/
 /*
  * FUNCTION:
  *		simlog_create
@@ -87,16 +47,28 @@ FILE* simlog_fd;
 int simlog_line;	// Last line written
 int lock_held = 0;
 
+#include <iostream>
+#include <fstream>
+#include <cstdlib>
+#include <filesystem>
+
+namespace fs = std::filesystem;
+
 int
 simlog_create()
 {
 	char timeStr[MAX_TIME_STR];
 	char msgBuf[MAX_LINE_LEN];
+	int rval = 0;
+
+	fs::current_path(localConfig.html_path);
+	fs::create_directory("simlogs");
+	fs::create_directory("simlogs/video");
 
 	// Format from status.scenario.start: "2021-02-22_09.31.53"
-	strftime(timeStr, MAX_TIME_STR, "%Y-%m-%d_%H.%M.%S", &simmgr_shm->status.scenario.tmStart );
-	sprintf_s(simlog_file, SIMLOG_NAME_LENGTH, "%s/%s_%s.log", SIMLOG_DIR, timeStr, simmgr_shm->status.scenario.active);
-
+	strftime(timeStr, MAX_TIME_STR, "%Y-%m-%d_%H.%M.%S", &simmgr_shm->status.scenario.tmStart);
+	sprintf_s(simlog_file, SIMLOG_NAME_LENGTH, "%s/simlogs/%s_%s.log", localConfig.html_path, timeStr, simmgr_shm->status.scenario.active);
+	printf("simlog_file is %s\n", simlog_file);
 	(void)simlog_open(SIMLOG_MODE_CREATE);
 	if (simlog_fd)
 	{
@@ -108,7 +80,6 @@ simlog_create()
 		simlog_close();
 		sprintf_s(simmgr_shm->logfile.filename, FILENAME_SIZE, "%s_%s.log", timeStr, simmgr_shm->status.scenario.active);
 		sprintf_s(simmgr_shm->logfile.vfilename, FILENAME_SIZE, "%s_%s.mp4", timeStr, simmgr_shm->status.scenario.active);
-		return (0);
 	}
 	else
 	{
@@ -116,8 +87,9 @@ simlog_create()
 		simmgr_shm->logfile.active = 0;
 		sprintf_s(simmgr_shm->logfile.filename, FILENAME_SIZE, "%s", "");
 		simmgr_shm->logfile.lines_written = 0;
-		return (-1);
+		rval = -1;
 	}
+	return (rval);
 }
 
 void
