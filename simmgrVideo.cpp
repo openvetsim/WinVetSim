@@ -111,6 +111,7 @@ recordStartStop(int record)
 		// Signal vitals JS code to trigger recording stop
 		obsd.obsWnd = NULL;
 	}
+	return(0);
 }
 
 off_t
