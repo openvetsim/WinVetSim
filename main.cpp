@@ -23,6 +23,8 @@
 
 #include <WinSDKVer.h>
 #define _WIN32_WINNT _WIN32_WINNT_MAXVER
+#include "version.h"
+
 #ifdef NDEBUG
 // Windows Header Files
 #include <stdlib.h>
@@ -38,7 +40,6 @@
 #include <shellapi.h>
 
 #include "vetsimTasks.h"
-#include "version.h"
 
 #ifdef _UNICODE
 typedef wchar_t TCHAR;
@@ -167,7 +168,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	TCHAR leaving[] = _T("Closing WinVetSim Server");
 	TCHAR version[128] = { 0, };
 
-	swprintf_s(version, L"Version %d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN);
+	swprintf_s(version, L"Version %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 
 	switch (message)
 	{
@@ -258,7 +259,7 @@ void ErrorExit(LPCTSTR lpszFunction)
 					}
 					c++;
 				}
-				printf("%S: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN);
+				printf("%S: Version %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 				exit(0);
 			}
 			else
@@ -299,7 +300,7 @@ int main(int argc, char *argv[] )
 					}
 					c++;
 				}
-				printf("%s: Version %d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN);
+				printf("%s: Version %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 				exit(0);
 			}
 			else
