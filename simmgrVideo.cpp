@@ -254,7 +254,6 @@ getVideoFileCount(void)
 
 	if ((hFind = FindFirstFile(name, &FindFileData)) != INVALID_HANDLE_VALUE) {
 		do {
-			printf("%S\n", FindFileData.cFileName);
 			file_count++;
 		} while (FindNextFile(hFind, &FindFileData));
 		FindClose(hFind);

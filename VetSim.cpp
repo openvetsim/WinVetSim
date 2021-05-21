@@ -1951,6 +1951,7 @@ start_scenario(void)
 	int fileCountAfter;
 	errno_t err;
 	int sts;
+	int tryCount = 0;
 
 	sprintf_s(c_msgbuf, BUF_SIZE, "Start Scenario Request: %s", simmgr_shm->status.scenario.active );
 	log_message("", c_msgbuf);
@@ -1967,7 +1968,7 @@ start_scenario(void)
 		{
 			sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "OBS is not running");
 			simmgr_shm->status.scenario.error_flag = 1;
-			updateScenarioState(ScenarioState::ScenarioRunning);
+			updateScenarioState(ScenarioState::ScenarioStopped);
 		}
 		while ((fileCountAfter = getVideoFileCount()) == fileCountBefore)
 		{
@@ -1977,10 +1978,22 @@ start_scenario(void)
 				cc = _getch();
 				if (cc == 'q' || cc == 'Q')
 				{
-					printf("Stopped Waiting for Video File\n");
+					printf("Quit Waiting for Video File\n");
+					sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Quit Waiting for Video File");
+					simmgr_shm->status.scenario.error_flag = 1;
+					updateScenarioState(ScenarioState::ScenarioStopped);
 					break;
 				}
 			}
+			if (tryCount++ > 50)
+			{
+				printf("timed out Waiting for Video File\n");
+				sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Timed Out Waiting for Video File");
+				simmgr_shm->status.scenario.error_flag = 1;
+				updateScenarioState(ScenarioState::ScenarioStopped);
+				break;
+			}
+			Sleep(100);
 		}
 	}
 

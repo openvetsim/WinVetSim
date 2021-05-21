@@ -72,6 +72,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ int       nCmdShow)
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
+	int sts;
 
 	WNDCLASSEX wcex;
 	memset((void*)&wcex, 0, sizeof(WNDCLASSEX));
@@ -142,7 +143,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	//ASSERT(pPopup != NULL);
 	//pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, 0, 0, AfxGetMainWnd());
 
-	start_task("VetSim", vetsim );
+	sts = start_task("VetSim", vetsim );
 
 	MSG msg;
 	while (GetMessage(&msg, NULL, 0, 0))
