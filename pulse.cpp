@@ -425,9 +425,9 @@ pulseTask(void )
 
 	//printf("Pulse Interval %llu Next %llu now %llu\n", pulseInterval, nextPulseTime, simmgr_shm->server.msec_time );
 	//printf("Calling start_task for pulseProcessChild\n");
-	start_task("pulseProcessChild", pulseProcessChild);
-	start_task("pulseTimer", pulseTimer);
-	start_task("pulseBroadcastLoop", pulseBroadcastLoop);
+	(void)start_task("pulseProcessChild", pulseProcessChild);
+	(void)start_task("pulseTimer", pulseTimer);
+	(void)start_task("pulseBroadcastLoop", pulseBroadcastLoop);
 	
 	for (i = 0; i < MAX_LISTENERS; i++)
 	{

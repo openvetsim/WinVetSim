@@ -25,7 +25,7 @@
 using namespace std;
 
 // Start a task to run once. Might run forever.
-void start_task(const char* name, std::function<void(void)> func)
+int start_task(const char* name, std::function<void(void)> func)
 {
 	std::thread::id id;
 
@@ -33,6 +33,7 @@ void start_task(const char* name, std::function<void(void)> func)
 	proc.detach();
 	id = proc.get_id();
 	cout << "Task Started: " << name << " " << id << endl;
+	return (0);
 }
 
 

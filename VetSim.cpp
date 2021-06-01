@@ -125,8 +125,8 @@ int vetsim()
 	initSHM(1, 0);
 
 	simmgrInitialize();
-	start_task("pluseTask", pulseTask);
-	start_task("simstatusMain", simstatusMain);
+	(void)start_task("pluseTask", pulseTask);
+	(void)start_task("simstatusMain", simstatusMain);
 
 	printf("Hostname: %s\n", simmgr_shm->server.name);
 	sprintf_s(msg_buf, BUF_SIZE, "%s", "Done");
@@ -1956,7 +1956,8 @@ start_scenario(void)
 	sprintf_s(c_msgbuf, BUF_SIZE, "Start Scenario Request: %s", simmgr_shm->status.scenario.active );
 	log_message("", c_msgbuf);
 
-	sprintf_s(sessionsPath, sizeof(sessionsPath), "/var/www/html/scenarios");
+	sprintf_s(sessionsPath, sizeof(sessionsPath), "%s\\scenarios", localConfig.html_path);
+
 	resetAllParameters();
 
 	if (simmgr_shm->status.scenario.record > 0)
@@ -1993,7 +1994,7 @@ start_scenario(void)
 				updateScenarioState(ScenarioState::ScenarioStopped);
 				break;
 			}
-			Sleep(100);
+			Sleep(500);
 		}
 	}
 
@@ -2020,8 +2021,12 @@ start_scenario(void)
 
 	updateScenarioState(ScenarioState::ScenarioRunning);
 
-	start_task("scenario_main", scenario_main);
+	sts = start_task("scenario_main", scenario_main);
 
+	if (sts)
+	{
+		updateScenarioState(ScenarioState::ScenarioStopped);
+	}
 	return (0);
 }
 

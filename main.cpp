@@ -55,6 +55,7 @@ int vetsim(void);
 HINSTANCE hInst;                                // current instance            
 static TCHAR szWindowClass[] = _T("DesktopApp");	// the main window class name
 static TCHAR szTitle[] = _T("WinVetSim");			// The title bar text
+static HINSTANCE ghInstance = NULL;
 
 // Forward declarations of functions included in this code module:
 //ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -74,6 +75,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	int sts;
 
+	ghInstance = hInstance;
+
 	WNDCLASSEX wcex;
 	memset((void*)&wcex, 0, sizeof(WNDCLASSEX));
 	wcex.cbSize = sizeof(WNDCLASSEX);
@@ -82,7 +85,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	wcex.cbClsExtra = 0;
 	wcex.cbWndExtra = 0;
 	wcex.hInstance = hInstance;
-	//wcex.hIcon = LoadIcon(hInstance, IDI_APPLICATION);
 	wcex.hIcon = LoadIcon(hInstance, IDI_APPLICATION);
 	wcex.hIconSm = LoadIcon(hInstance, IDI_APPLICATION);
 	wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
@@ -93,9 +95,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	if (!RegisterClassEx(&wcex))
 	{
-		LPCTSTR s = _T("RegisterClassEx");
-		ErrorExit(s);
-
+		MessageBox(0, L"Window Registration Failed!", L"Error!", MB_ICONSTOP | MB_OK);
 		return 1;
 	}
 
@@ -115,19 +115,14 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
-		500, 500,
-		NULL,
-		NULL,
+		700, 500,
+		NULL, NULL,
 		hInstance,
-		NULL
-	);
+		NULL	);
+
 	if (!hWnd)
 	{
-		MessageBox(NULL,
-			_T("Call to CreateWindow failed!"),
-			_T("Windows Desktop Guided Tour"),
-			NULL);
-
+		MessageBox(0, L"Window Creation Failed!", L"Error!", MB_ICONSTOP | MB_OK);
 		return 1;
 	}
 	// The parameters to ShowWindow explained:
@@ -161,6 +156,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 //
 //  WM_PAINT    - Paint the main window
 //  WM_DESTROY  - post a quit message and return
+HWND hButton, hCombo, hEdit, hList, hScroll, hStatic;
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	PAINTSTRUCT ps;
@@ -168,11 +165,74 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	TCHAR greeting[] = _T("Open VetSim Simulator System");
 	TCHAR leaving[] = _T("Closing WinVetSim Server");
 	TCHAR version[128] = { 0, };
+	
 
 	swprintf_s(version, L"Version %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 
 	switch (message)
 	{
+	case WM_CREATE:
+		/*hButton = CreateWindowEx(
+			NULL,
+			L"Button",
+			L"Button Example",
+			WS_BORDER | WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+			20, 20,
+			100, 30,
+			hWnd, NULL,
+			ghInstance,
+			NULL); */
+		/*hCombo = CreateWindowEx(
+			NULL,
+			L"ComboBox",
+			L"darkblue",
+			WS_BORDER | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+			20, 50,
+			100, 100,
+			hWnd, NULL,
+			ghInstance,
+			NULL);*/
+		/*hEdit = CreateWindowEx(
+			NULL,
+			L"Edit",
+			L"edit box example",
+			WS_BORDER | WS_CHILD | WS_VISIBLE,
+			20, 300,
+			100, 300,
+			hWnd, NULL,
+			ghInstance,
+			NULL);*/
+		/*hList = CreateWindowEx(
+			NULL,
+			L"ListBox",
+			L"db db db",
+			WS_BORDER | WS_CHILD | WS_VISIBLE,
+			100, 0,
+			100, 200,
+			hWnd, NULL,
+			ghInstance,
+			NULL); */
+		/*hScroll = CreateWindowEx(
+			NULL,
+			L"ScrollBar",
+			L"",
+			WS_BORDER | WS_CHILD | WS_VISIBLE | SBS_VERT,
+			10, 50,
+			650, 400,
+			hWnd, NULL,
+			ghInstance,
+			NULL); */
+		/*hStatic = CreateWindowEx(
+			NULL,
+			L"Static",
+			L"",
+			WS_BORDER | WS_CHILD | WS_VISIBLE | SS_BLACKRECT,
+			300, 90,
+			100, 30,
+			hWnd, NULL,
+			ghInstance,
+			NULL);*/
+		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 
@@ -186,7 +246,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			5, 
 			20,
 			version, 
-			(int)_tcslen(greeting));
+			(int)_tcslen(version));
 		// End application-specific layout section.
 
 		EndPaint(hWnd, &ps);
@@ -200,6 +260,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		stopPHPServer();
 		PostQuitMessage(0);
 		break;
+
+	case WM_CLOSE:
+		DestroyWindow(hWnd);
+		break;
+
 	default:
 		return DefWindowProc(hWnd, message, wParam, lParam);
 		break;
@@ -236,8 +301,8 @@ void ErrorExit(LPCTSTR lpszFunction)
 		lpszFunction, dw, lpMsgBuf);
 	MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
 
-	LocalFree(lpMsgBuf);
-	LocalFree(lpDisplayBuf);
+	if ( lpMsgBuf != NULL ) LocalFree(lpMsgBuf);
+	if ( lpDisplayBuf != NULL )	LocalFree(lpDisplayBuf);
 	ExitProcess(dw);
 	/*
 	argv = CommandLineToArgvW(GetCommandLine(), &argc);

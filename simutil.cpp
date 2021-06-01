@@ -109,7 +109,9 @@ void log_message(const char* filename, const char* message)
 		fprintf(logfile, "%s\n", message);
 		fclose(logfile);
 	}
-	printf("%s\n", message);
+
+	//	printf("%s\n", message);
+	// OutputDebugStringA(message);
 }
 
 void log_messaget(const char* filename, TCHAR* message)

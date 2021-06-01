@@ -11,6 +11,6 @@ int startPHPServer(void);
 void stopPHPServer(void);
 void simstatusMain(void);
 
-void start_task(const char* name, std::function<void(void)> func);
+int start_task(const char* name, std::function<void(void)> func);
 void timer_start(std::function<void(void)> func, unsigned int interval);
 

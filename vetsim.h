@@ -448,21 +448,21 @@ struct trend
 int	initSHM(int create, char* sesid);
 void log_message(const char* filename, const char* message);
 void log_messaget(const char* filename, TCHAR* message);
-char* nth_occurrence(char* haystack, char* needle, int nth);
 char* do_command_read(const char* cmd_str, char* buffer, int max_len);
 void get_date(char* buffer, int maxLen);
 char* getETH0_IP();
 char* getWIFI_IP();
 #ifndef WIN32
+char* nth_occurrence(char* haystack, char* needle, int nth);
 void daemonize(void);
 int kbhit(void);
 int checkExit(void);
 char* _itoa(int val, char* buf, int radix);
 char* _ltoa(long int val, char* buf, int radix);
+void signal_fault_handler(int sig);
 #else
 void showLastError(LPTSTR lpszFunction);
 #endif
-void signal_fault_handler(int sig);
 void cleanString(char* strIn);
 
 // Defines and protos for sim-log
@@ -551,6 +551,6 @@ void setRespirationPeriods(int oldRate, int newRate);
 void strToLower(char* buf);
 
 // In simmgrVideo
-int initOBSSHM(int create);
 int recordStartStop(int record);
 int getVideoFileCount(void);
+void closeVideoCapture(void);

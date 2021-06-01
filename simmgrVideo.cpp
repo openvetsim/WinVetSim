@@ -110,6 +110,7 @@ recordStartStop(int record)
 		// Send Stop
 		// Signal vitals JS code to trigger recording stop
 		obsd.obsWnd = NULL;
+		closeVideoCapture();
 	}
 	return(0);
 }
@@ -132,14 +133,14 @@ getFileSize(char* fname)
 #include <minwinbase.h>
 #include <winnt.h>
 int
-getLatestFile(char* rname, char* dir)
+getLatestFile(char* rname, int bufsize, char* dir)
 {
 	ULARGE_INTEGER lint;
 	unsigned long long fileDate = 0;
 	unsigned long long latestDate = 0;
 
 	wchar_t fname[MAX_PATH];
-	swprintf_s(fname, MAX_PATH, L"%S\\simlogs\\video\\*.mkv", localConfig.html_path );
+	swprintf_s(fname, MAX_PATH, L"%S\\simlogs\\video\\*.mp4", localConfig.html_path );
 	wchar_t latestFname[MAX_PATH] = { 0, };
 
 	HANDLE hFind;
@@ -161,7 +162,7 @@ getLatestFile(char* rname, char* dir)
 
 	if (wcslen(latestFname) != 0)
 	{
-		sprintf_s(rname, sizeof(rname), "%ls", latestFname);
+		sprintf_s(rname, bufsize, "%ls", latestFname);
 		return (0);
 	}
 	else
@@ -174,20 +175,27 @@ int
 renameVideoFile(char* filename)
 {
 	int sts;
-	char drive[_MAX_DRIVE];
-	char dir[_MAX_DIR];
-	char fname[_MAX_FNAME];
-	char ext[_MAX_EXT];
+	char drive[10];
+	char dir[1024];
+	char fname[1024];
+	char ext[10];
 	char newFile[1024];
 	char oldFile[1024];
 	errno_t err;
 	snprintf(oldFile, 1024, "%s", filename);
-
-	err = _splitpath_s(filename, drive, _MAX_DRIVE, dir, _MAX_DRIVE, fname, _MAX_FNAME, ext, _MAX_EXT);
-
-	snprintf(newFile, 1024, "%s/%s/%s", drive, dir, obsd.newFilename);
-	printf("Rename %s to %s\n", oldFile, newFile);
-	sts = rename(oldFile, newFile);
+	//printf("Calling _splitpath_s(\"%s\", %p, %d, %p, %d,%p, %d,%p, %d\n", filename, drive, 1024, dir, 1024, fname, 1024, ext, 1024);
+	err = _splitpath_s(filename, drive, 10, dir, 1024, fname, 1024, ext, 10);
+	if (err)
+	{
+		printf("_splitpath_s err: %d\n", err );
+		sts = err;
+	}
+	else
+	{
+		snprintf(newFile, 1024, "%s%s%s", drive, dir, obsd.newFilename);
+		printf("Rename %s to %s\n", oldFile, newFile);
+		sts = rename(oldFile, newFile);
+	}
 	return (sts);
 }
 
@@ -206,9 +214,9 @@ closeVideoCapture()
 	int sts;
 
 	// Wait for file to complete and then rename it.
-	// 1 - Find the latest file in /var/www/html/simlogs/video
-	sprintf_s(path, MAX_PATH, "%s", "/var/www/html/simlogs/video");
-	sts = getLatestFile(filename, path);
+	// 1 - Find the latest file in simlogs/video
+	sprintf_s(path, MAX_PATH, "%s/%s", localConfig.html_path, "simlogs/video");
+	sts = getLatestFile(filename, sizeof(filename), path);
 	if (sts == 0)
 	{
 		// Found file
@@ -229,16 +237,24 @@ closeVideoCapture()
 		// 3 - Rename the file
 		if (loops < MAX_FILE_WAIT_LOOPS)
 		{
-			sts = renameVideoFile(filename);
+			for (loops = 0; loops < MAX_FILE_WAIT_LOOPS; loops++)
+			{
+				sts = renameVideoFile(filename);
+				if (sts == 0)
+				{
+					break;
+				}
+				Sleep(1000);
+			}
 			if (sts != 0)
 			{
 				strerror_s(smvbuf, 512, errno);
-				printf("renameVideoFile failed: %s", smvbuf);
+				printf("renameVideoFile failed: %s\n", smvbuf);
 			}
 		}
 		else
 		{
-			printf("File Size did not stop %d, %d", fsizeA, fsizeB);
+			printf("File Size did not stop %d, %d\nq", fsizeA, fsizeB);
 		}
 	}
 }
@@ -250,7 +266,7 @@ getVideoFileCount(void)
 	HANDLE hFind;
 	WIN32_FIND_DATA FindFileData;
 	wchar_t name[MAX_PATH];
-	swprintf_s(name, L"%S\\simlogs\\video\\*.mkv", localConfig.html_path);
+	swprintf_s(name, L"%S\\simlogs\\video\\*.mp4", localConfig.html_path);
 
 	if ((hFind = FindFirstFile(name, &FindFileData)) != INVALID_HANDLE_VALUE) {
 		do {
@@ -261,97 +277,3 @@ getVideoFileCount(void)
 
 	return (file_count);
 }
-
-wchar_t testKeyStr1[] = L"This is a test\n";
-wchar_t testKeyStr2[] = L"A";
-wchar_t testKeyStr3[] = L"B";
-
-//**********************************************************************
-//
-// Sends Win + D to toggle to the desktop
-//
-//**********************************************************************
-void ShowDesktop()
-{
-	wprintf(L"Sending 'Win-D'\r\n");
-	INPUT inputs[4];
-	ZeroMemory(inputs, sizeof(inputs));
-
-	inputs[0].type = INPUT_KEYBOARD;
-	inputs[0].ki.wVk = VK_LWIN;
-
-	inputs[1].type = INPUT_KEYBOARD;
-	inputs[1].ki.wVk = 'D';
-
-	inputs[2].type = INPUT_KEYBOARD;
-	inputs[2].ki.wVk = 'D';
-	inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
-
-	inputs[3].type = INPUT_KEYBOARD;
-	inputs[3].ki.wVk = VK_LWIN;
-	inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-
-	UINT uSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
-	if (uSent != ARRAYSIZE(inputs))
-	{
-		wprintf(L"SendInput failed: 0x%x\n", HRESULT_FROM_WIN32(GetLastError()));
-	}
-}
-/*
-void
-testKeys(void)
-{
-	//BOOL sts;
-	char pgm[] = "obs64.exe";
-	HWND wnd;
-	getObsHandle(pgm);
-	if (obsd.obsWnd)
-	{
-		INPUT inputs[2];
-		ZeroMemory(inputs, sizeof(inputs));
-
-		inputs[0].type = INPUT_KEYBOARD;
-		inputs[0].ki.wVk = 'A';
-
-		inputs[1].type = INPUT_KEYBOARD;
-		inputs[1].ki.wVk = 'A';
-		inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-
-		wnd = obsd.obsWnd;
-		printf("Got handle for %s\n", pgm );
-		//skey.AppActivate(obsd.obsWnd);
-		//::SendMessage(wnd, WM_SYSCOMMAND, SC_HOTKEY, (LPARAM)wnd);
-		::SendMessage(wnd, WM_SYSCOMMAND, SC_RESTORE, (LPARAM)wnd);
-
-		::ShowWindow(wnd, SW_SHOW);
-		::SetForegroundWindow(wnd);
-		::SetFocus(wnd);
-
-		UINT uSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
-		if (uSent != ARRAYSIZE(inputs))
-		{
-			wprintf(L"SendInput 'A' failed: 0x%x\n", HRESULT_FROM_WIN32(GetLastError()));
-			return;
-		}
-		Sleep(10000);
-		inputs[0].type = INPUT_KEYBOARD;
-		inputs[0].ki.wVk = 'B';
-
-		inputs[1].type = INPUT_KEYBOARD;
-		inputs[1].ki.wVk = 'B';
-		inputs[1].ki.dwFlags = KEYEVENTF_KEYUP;
-
-		uSent = SendInput(ARRAYSIZE(inputs), inputs, sizeof(INPUT));
-		if (uSent != ARRAYSIZE(inputs))
-		{
-			wprintf(L"SendInput 'B' failed: 0x%x\n", HRESULT_FROM_WIN32(GetLastError()));
-			return;
-		}
-	}
-	else
-	{
-		printf("Failed handle for %s\n", pgm);
-	}
-}
-*/
