@@ -227,7 +227,7 @@ simlog_write(char* msg)
 		simmgr_shm->status.scenario.runtimeScenario,
 		simmgr_shm->status.scenario.runtimeScene,
 		msg);
-
+		
 	simlog_line++;
 	simmgr_shm->logfile.lines_written = simlog_line;
 	return (simlog_line);

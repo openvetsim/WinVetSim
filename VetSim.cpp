@@ -1238,7 +1238,7 @@ scan_commands(void)
 		}
 		else if (strcmp(simmgr_shm->instructor.scenario.state, "running") == 0)
 		{
-			printf("running\n");
+			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "");
 			if (scenario_state == ScenarioState::ScenarioPaused)
 			{
 				printf("Calling updateScenarioState(Running)\n");
@@ -1246,9 +1246,8 @@ scan_commands(void)
 			}
 			else if (scenario_state == ScenarioState::ScenarioStopped)
 			{
-				printf("Calling start_scenario\n");
-				scenario_start_time = time(nullptr);
-				sts = start_scenario();
+				printf("Starting start_scenario\n");
+				start_task("start_scenario", start_scenario );
 			}
 			else if(scenario_state == ScenarioState::ScenarioRunning)
 			{
@@ -1943,6 +1942,22 @@ scan_commands(void)
 	return (0);
 }
 
+void
+start_scenario_log(void)
+{
+	char timeBuf[64];
+	errno_t err;
+
+	simmgr_shm->status.scenario.startTime = std::time(nullptr);
+	err = localtime_s(&simmgr_shm->status.scenario.tmStart, &simmgr_shm->status.scenario.startTime);
+	if (err)
+	{
+		printf("Invalid Arg to localtime_s\n");
+	}
+	std::strftime(timeBuf, 60, "%c", &simmgr_shm->status.scenario.tmStart);
+
+	(void)simlog_create();
+}
 int
 start_scenario(void)
 {
@@ -1950,15 +1965,13 @@ start_scenario(void)
 	int fileCountBefore;
 	int fileCountAfter;
 	errno_t err;
-	int sts;
+	int sts = 0;
 	int tryCount = 0;
-
-	sprintf_s(c_msgbuf, BUF_SIZE, "Start Scenario Request: %s", simmgr_shm->status.scenario.active );
-	log_message("", c_msgbuf);
 
 	sprintf_s(sessionsPath, sizeof(sessionsPath), "%s\\scenarios", localConfig.html_path);
 
 	resetAllParameters();
+	simmgr_shm->status.scenario.error_flag = 0;
 
 	if (simmgr_shm->status.scenario.record > 0)
 	{
@@ -1971,61 +1984,70 @@ start_scenario(void)
 			simmgr_shm->status.scenario.error_flag = 1;
 			updateScenarioState(ScenarioState::ScenarioStopped);
 		}
-		while ((fileCountAfter = getVideoFileCount()) == fileCountBefore)
+		else
 		{
-			int cc;
-			if (_kbhit())
+			while ((fileCountAfter = getVideoFileCount()) == fileCountBefore)
 			{
-				cc = _getch();
-				if (cc == 'q' || cc == 'Q')
+				int cc;
+				if (_kbhit())
 				{
-					printf("Quit Waiting for Video File\n");
-					sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Quit Waiting for Video File");
+					cc = _getch();
+					if (cc == 'q' || cc == 'Q')
+					{
+						printf("Quit Waiting for Video File\n");
+						sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Quit Waiting for Video File");
+						simmgr_shm->status.scenario.error_flag = 1;
+						updateScenarioState(ScenarioState::ScenarioStopped);
+						break;
+					}
+				}
+				if (tryCount++ > 50)
+				{
+					log_message("", "timed out Waiting for Video File\n");
+					sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Timed Out Waiting for Video File");
 					simmgr_shm->status.scenario.error_flag = 1;
 					updateScenarioState(ScenarioState::ScenarioStopped);
 					break;
 				}
+				Sleep(500);
 			}
-			if (tryCount++ > 50)
-			{
-				printf("timed out Waiting for Video File\n");
-				sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Timed Out Waiting for Video File");
-				simmgr_shm->status.scenario.error_flag = 1;
-				updateScenarioState(ScenarioState::ScenarioStopped);
-				break;
-			}
-			Sleep(500);
 		}
 	}
 
-	simmgr_shm->status.scenario.startTime = std::time(nullptr);
-	err = localtime_s(&simmgr_shm->status.scenario.tmStart, &simmgr_shm->status.scenario.startTime);
-	if (err)
+	start_scenario_log();
+	if (simmgr_shm->status.scenario.error_flag != 0)
 	{
-		printf("Invalid Arg to localtime_s\n");
+		simlog_entry(simmgr_shm->status.scenario.error_message);
+		printf("%s\n", simmgr_shm->status.scenario.error_message);
+		updateScenarioState(ScenarioState::ScenarioTerminate);
 	}
-	std::strftime(timeBuf, 60, "%c", &simmgr_shm->status.scenario.tmStart );
-
-	(void)simlog_create();
-	// start the new scenario
-	
-	sprintf_s(msg_buf, BUF_SIZE, "Start Scenario: %s", simmgr_shm->status.scenario.active);
-	log_message("", msg_buf);
-	sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", simmgr_shm->status.scenario.active);
-
-	sprintf_s(simmgr_shm->status.scenario.start, STR_SIZE, "%s", timeBuf);
-	sprintf_s(simmgr_shm->status.scenario.runtimeAbsolute, STR_SIZE, "%s", "00:00:00");
-	sprintf_s(simmgr_shm->status.scenario.runtimeScenario, STR_SIZE, "%s", "00:00:00");
-	sprintf_s(simmgr_shm->status.scenario.runtimeScene, STR_SIZE, "%s", "00:00:00");
-	simmgr_shm->status.scenario.error_flag = 0;
-
-	updateScenarioState(ScenarioState::ScenarioRunning);
-
-	sts = start_task("scenario_main", scenario_main);
-
-	if (sts)
+	else
 	{
-		updateScenarioState(ScenarioState::ScenarioStopped);
+		// start the new scenario
+
+		scenario_start_time = time(nullptr);
+		sprintf_s(msg_buf, BUF_SIZE, "Start Scenario: %s", simmgr_shm->status.scenario.active);
+		simlog_entry(msg_buf);
+
+		sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", simmgr_shm->status.scenario.active);
+		std::strftime(timeBuf, 60, "%c", &simmgr_shm->status.scenario.tmStart);
+
+		sprintf_s(simmgr_shm->status.scenario.start, STR_SIZE, "%s", timeBuf);
+		sprintf_s(simmgr_shm->status.scenario.runtimeAbsolute, STR_SIZE, "%s", "00:00:00");
+		sprintf_s(simmgr_shm->status.scenario.runtimeScenario, STR_SIZE, "%s", "00:00:00");
+		sprintf_s(simmgr_shm->status.scenario.runtimeScene, STR_SIZE, "%s", "00:00:00");
+		simmgr_shm->status.scenario.error_flag = 0;
+
+		sts = start_task("scenario_main", scenario_main);
+
+		if (sts)
+		{
+			updateScenarioState(ScenarioState::ScenarioStopped);
+		}
+		else
+		{
+			updateScenarioState(ScenarioState::ScenarioRunning);
+		}
 	}
 	return (0);
 }

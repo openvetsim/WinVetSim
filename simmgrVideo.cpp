@@ -27,7 +27,7 @@
 
 using namespace std;
 
-struct obsData obsd;
+struct obsData obsd = { NULL, 0, "" };
 
 DWORD processId;
 /**
@@ -47,6 +47,10 @@ BOOL CALLBACK EnumWindowsProcMy(HWND hwnd, LPARAM lParam)
 
 		printf("Found OBS Process\n");
 		return FALSE;
+	}
+	else
+	{
+		obsd.obsWnd = NULL;
 	}
 	return TRUE;
 }
@@ -96,6 +100,7 @@ recordStartStop(int record)
 
 	if (obsd.obsWnd == NULL)
 	{
+		log_message("", "OBS is not running");
 		return ( -1 );
 	}
 	if (record)
