@@ -79,11 +79,12 @@ struct scenario_data
 	struct snode event_list;
 };
 
+#define SCENE_NAME_MAX_LEN	255
 struct scenario_scene
 {
 	struct snode scene_list;
 	int id;				// numeric ID - 1 is always the entry scene, 2 is always the end scene
-	char name[32];		// 
+	char name[SCENE_NAME_MAX_LEN+1];		// 
 
 	// Initialization Parameters for the scene
 	struct instructor initParams;

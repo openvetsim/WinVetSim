@@ -1084,7 +1084,7 @@ saveData(const char* xmlName, const char* xmlValue)
 				}
 				else if (strcmp(xmlLevels[2].name, "title") == 0)
 				{
-					sprintf_s(new_scene->name, 32, "%s", value);
+					sprintf_s(new_scene->name, SCENE_NAME_MAX_LEN, "%s", value);
 					if (verbose)
 					{
 						printf("Set Scene Name to %s\n", new_scene->name);
