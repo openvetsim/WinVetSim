@@ -67,10 +67,10 @@
 // Scenario
 struct scenario_data
 {
-	char author[LONG_STRING_SIZE];
-	char title[LONG_STRING_SIZE];
-	char date_created[NORMAL_STRING_SIZE];
-	char description[LONG_STRING_SIZE];
+	char author[LONG_STRING_SIZE+2];
+	char title[LONG_STRING_SIZE+2];
+	char date_created[NORMAL_STRING_SIZE+2];
+	char description[LONG_STRING_SIZE+2];
 
 	// Initialization Parameters for the scenario
 	struct instructor initParams;
@@ -79,12 +79,11 @@ struct scenario_data
 	struct snode event_list;
 };
 
-#define SCENE_NAME_MAX_LEN	255
 struct scenario_scene
 {
 	struct snode scene_list;
 	int id;				// numeric ID - 1 is always the entry scene, 2 is always the end scene
-	char name[SCENE_NAME_MAX_LEN+1];		// 
+	char name[LONG_STRING_SIZE+1];		// 
 
 	// Initialization Parameters for the scene
 	struct instructor initParams;
@@ -115,8 +114,8 @@ struct scenario_scene
 struct scenario_trigger
 {
 	struct	snode trigger_list;
-	char 	param_class[TRIGGER_NAME_LENGTH];	// Class eg: cardiac, resipration, ...
-	char 	param_element[TRIGGER_NAME_LENGTH];	// Parameter eg: rate, transfer_time, ...
+	char 	param_class[TRIGGER_NAME_LENGTH+2];	// Class eg: cardiac, resipration, ...
+	char 	param_element[TRIGGER_NAME_LENGTH+2];	// Parameter eg: rate, transfer_time, ...
 	int		test;
 	int		value;		// Comparison value
 	int		value2;		// Comparison value (only for Inside/Outside)
@@ -126,10 +125,10 @@ struct scenario_trigger
 struct scenario_event
 {
 	struct	snode event_list;
-	char	event_catagory_name[NORMAL_STRING_SIZE];
-	char	event_catagory_title[NORMAL_STRING_SIZE];
-	char	event_title[NORMAL_STRING_SIZE];
-	char	event_id[NORMAL_STRING_SIZE];
+	char	event_catagory_name[NORMAL_STRING_SIZE+2];
+	char	event_catagory_title[NORMAL_STRING_SIZE+2];
+	char	event_title[NORMAL_STRING_SIZE+2];
+	char	event_id[NORMAL_STRING_SIZE+2];
 };
 
 // For Parsing the XML:

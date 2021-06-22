@@ -1188,7 +1188,6 @@ setRespirationPeriods(int oldRate, int newRate)
 int
 scan_commands(void)
 {
-	int sts;
 	int trycount;
 	int oldRate;
 	int newRate;
@@ -1964,7 +1963,6 @@ start_scenario(void)
 	char timeBuf[64];
 	int fileCountBefore;
 	int fileCountAfter;
-	errno_t err;
 	int sts = 0;
 	int tryCount = 0;
 

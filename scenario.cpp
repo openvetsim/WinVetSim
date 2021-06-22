@@ -81,8 +81,8 @@ int errCount = 0;
 // Internal state is tracked to compare to the overall state, for detecting changes
 ScenarioState proc_scenario_state;
 
-char current_event_catagory[NORMAL_STRING_SIZE];
-char current_event_title[NORMAL_STRING_SIZE];
+char current_event_catagory[NORMAL_STRING_SIZE+2];
+char current_event_title[NORMAL_STRING_SIZE+2];
 
 struct scenario_scene* current_scene;
 struct scenario_data* scenario;
@@ -910,14 +910,14 @@ startScene(int sceneId)
 		takeInstructorLock();
 		addComment(s_msg);
 		sprintf_s(simmgr_shm->instructor.scenario.state, NORMAL_STRING_SIZE, "%s", "Terminate");
-		sprintf_s(simmgr_shm->status.scenario.scene_name, NORMAL_STRING_SIZE, "%s", "");
+		sprintf_s(simmgr_shm->status.scenario.scene_name, LONG_STRING_SIZE, "%s", "");
 		releaseInstructorLock();
 		return;
 	}
 	current_scene = new_scene;
 	simmgr_shm->status.scenario.elapsed_msec_scene = 0;
 	cprCumulative = 0;
-	sprintf_s(simmgr_shm->status.scenario.scene_name, NORMAL_STRING_SIZE, "%s", current_scene->name);
+	sprintf_s(simmgr_shm->status.scenario.scene_name, LONG_STRING_SIZE, "%s", current_scene->name);
 
 	simmgr_shm->status.scenario.scene_id = sceneId;
 	simmgr_shm->status.respiration.manual_count = 0;
@@ -1084,7 +1084,7 @@ saveData(const char* xmlName, const char* xmlValue)
 				}
 				else if (strcmp(xmlLevels[2].name, "title") == 0)
 				{
-					sprintf_s(new_scene->name, SCENE_NAME_MAX_LEN, "%s", value);
+					sprintf_s(new_scene->name, LONG_STRING_SIZE, "%s", value);
 					if (verbose)
 					{
 						printf("Set Scene Name to %s\n", new_scene->name);
@@ -1390,12 +1390,19 @@ startParseState(int lvl, char* name)
 		{
 			// Allocate a scene
 			new_scene = (struct scenario_scene*)calloc(1, sizeof(struct scenario_scene));
-			initializeParameterStruct(&new_scene->initParams);
-			insert_llist(&new_scene->scene_list, &scenario->scene_list);
-			parse_state = PARSE_STATE_SCENE;
-			if (verbose)
+			if (new_scene)
 			{
-				printf("***** New Scene started ******\n");
+				initializeParameterStruct(&new_scene->initParams);
+				insert_llist(&new_scene->scene_list, &scenario->scene_list);
+				parse_state = PARSE_STATE_SCENE;
+				if (verbose)
+				{
+					printf("***** New Scene started ******\n");
+				}
+			}
+			else
+			{
+				printf("Failed to calloc new_scene\n");
 			}
 		}
 		else if (strcmp(name, "events") == 0)
@@ -1538,12 +1545,19 @@ startParseState(int lvl, char* name)
 				(strcmp(name, "trigger") == 0))
 			{
 				new_trigger = (struct scenario_trigger*)calloc(1, sizeof(struct scenario_trigger));
-				insert_llist(&new_trigger->trigger_list, &new_scene->trigger_list);
-
-				parse_scene_state = PARSE_SCENE_STATE_TRIG;
-				if (verbose)
+				if (new_trigger)
 				{
-					printf("***** New Trigger started ******\n");
+					insert_llist(&new_trigger->trigger_list, &new_scene->trigger_list);
+
+					parse_scene_state = PARSE_SCENE_STATE_TRIG;
+					if (verbose)
+					{
+						printf("***** New Trigger started ******\n");
+					}
+				}
+				else
+				{
+					printf("Failed to callog new_trigger\n");
 				}
 			}
 			break;
@@ -1555,14 +1569,21 @@ startParseState(int lvl, char* name)
 					printf("New Event %s : %s\n", current_event_catagory, current_event_title);
 				}
 				new_event = (struct scenario_event*)calloc(1, sizeof(struct scenario_event));
-				insert_llist(&new_event->event_list, &scenario->event_list);
-
-				sprintf_s(new_event->event_catagory_name, NORMAL_STRING_SIZE, "%s", current_event_catagory);
-				sprintf_s(new_event->event_catagory_title, NORMAL_STRING_SIZE, "%s", current_event_title);
-
-				if (verbose)
+				if (new_event)
 				{
-					printf("***** New Event started ******\n");
+					insert_llist(&new_event->event_list, &scenario->event_list);
+
+					sprintf_s(new_event->event_catagory_name, NORMAL_STRING_SIZE, "%s", current_event_catagory);
+					sprintf_s(new_event->event_catagory_title, NORMAL_STRING_SIZE, "%s", current_event_title);
+
+					if (verbose)
+					{
+						printf("***** New Event started ******\n");
+					}
+				}
+				else
+				{
+					printf("Faild to calloc new_event\n");
 				}
 			}
 			break;
