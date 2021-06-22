@@ -58,6 +58,7 @@
 //
 
 #define STR_SIZE			64
+#define LONG_STR_SIZE		128
 #define FILENAME_SIZE		256
 #define COMMENT_SIZE		1024
 #define LOG_TO_FILE			0
@@ -169,8 +170,8 @@ struct scenario
 	char runtimeScene[STR_SIZE];
 	char clockDisplay[STR_SIZE];
 	char state[STR_SIZE];
-	char scene_name[STR_SIZE];	// Currently running scene
-	char error_message[STR_SIZE]; // From scenario process, on failure
+	char scene_name[LONG_STR_SIZE];	// Currently running scene
+	char error_message[LONG_STR_SIZE]; // From scenario process, on failure
 	int error_flag;				  // Set to indicate error
 	int scene_id;				// Currently running scene
 	int record;					// Set in initiator section to start/stop video recording

@@ -1978,7 +1978,7 @@ start_scenario(void)
 		sts = recordStartStop(1);
 		if (sts != 0)
 		{
-			sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "OBS is not running");
+			sprintf_s(simmgr_shm->status.scenario.error_message, "OBS not running: %s", "Start OBS or uncheck \"Start Video with Scenario\" box. Then start scenario.");
 			simmgr_shm->status.scenario.error_flag = 1;
 			updateScenarioState(ScenarioState::ScenarioStopped);
 		}
