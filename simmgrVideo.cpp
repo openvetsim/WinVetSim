@@ -101,6 +101,8 @@ recordStartStop(int record)
 	if (obsd.obsWnd == NULL)
 	{
 		log_message("", "OBS is not running. Please Start OBS or uncheck the \"Start Video with Scenario\" box. Then start the scenario again.");
+		// Attempt to start OBS
+
 		return ( -1 );
 	}
 	if (record)

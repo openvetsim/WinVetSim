@@ -259,7 +259,42 @@ calculateVPCFreq(void)
 		vpcFrequencyIndex = 0;
 	}
 }
+/*
+ * FUNCTION:
+ *		getWaitTimeMsec
+ *
+ * ARGUMENTS:
+ *		rate	- Rate in Beats per minute
+ *		isCaridac	- Set to IS_CARDIAC for the cardiac timer
+ *		isFib		- Set if 10 phase timer is needed
+ *
+ * DESCRIPTION:
+ *		Calculate and set the timer, used for both heart and breath.
+ *
+ * ASSUMPTIONS:
+ *		Called with pulseSema or breathSema held
+*/
+ULONGLONG
+getWaitTimeMsec(int rate, int isCardiac, int isFib)
+{
+	double frate;	// Beats per minute
+	double sec_per_beat;
+	double msec_per_beat_f;
+	ULONGLONG wait_time_msec;
 
+	frate = (double)rate;
+	sec_per_beat = 1 / (frate / 60);
+
+	// Note that the heart beat handler is called 10 times per interval, 
+	// to provide VPC and AFIB functions
+	if (isFib)
+	{
+		sec_per_beat = sec_per_beat / 10;
+	}
+	msec_per_beat_f = sec_per_beat * 1000;
+	wait_time_msec = (ULONGLONG)(msec_per_beat_f);
+	return (wait_time_msec);
+}
 /*
  * FUNCTION:
  *		resetTimer
@@ -280,22 +315,10 @@ resetTimer(int rate, int isCardiac, int isFib)
 {
 	ULONGLONG wait_time_msec;
 	ULONGLONG remaining;
-	double frate;	// Beats per minute
-	double sec_per_beat;
-	double msec_per_beat_f;
 	ULONGLONG now = simmgr_shm->server.msec_time;
 
-	frate = (double)rate;
-	sec_per_beat = 1 / (frate / 60);
+	wait_time_msec = getWaitTimeMsec(rate, isCardiac, isFib);
 
-	// Note that the heart beat handler is called 10 times per interval, 
-	// to provide VPC and AFIB functions
-	if (isFib)
-	{
-		sec_per_beat = sec_per_beat / 10;
-	}
-	msec_per_beat_f = sec_per_beat * 1000;
-	wait_time_msec = (ULONGLONG)(msec_per_beat_f);
 	//printf("Set Timer: Rate %d sec_per_beat %f %llu\n", rate, sec_per_beat, wait_time_msec);
 	if (isCardiac)
 	{
@@ -357,19 +380,20 @@ void
 restart_breath_timer(void)
 {
 	ULONGLONG now = simmgr_shm->server.msec_time;
+	ULONGLONG wait_time_msec;
+
+	wait_time_msec = getWaitTimeMsec(simmgr_shm->status.respiration.rate, 0, 0);
+	breathInterval = wait_time_msec;
 	
-	breathInterval = (ULONGLONG)simmgr_shm->status.respiration.rate * 60000;
-	
-	// For very slow cycles (less than 15 BPM), set initial timer to half the cycle plus add 1 seconds.
+	// For very slow cycles (less than 15 BPM), set initial timer to half the cycle plus add 0.1 seconds.
 	if (simmgr_shm->status.respiration.rate < 15)
 	{
-		nextBreathTime = now + ((breathInterval / 2) + 60);
+		nextBreathTime = now + ((breathInterval / 2) + 100);
 	}
 	else
 	{
 		nextBreathTime = now + breathInterval;
 	}
-	
 }
 
 void

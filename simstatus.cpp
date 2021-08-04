@@ -1365,8 +1365,9 @@ sendStatus(void)
 	_ltoa_s(simmgr_shm->status.cardiac.avg_rate, buffer, 256, 10);
 	makejson("avg_rate", buffer);
 	htmlReply += ",\n";
-	_itoa_s(simmgr_shm->server.dbg1, buffer, 256, 10);
-	makejson("debug1", buffer);
+	extern ULONGLONG breathInterval;
+	_i64toa_s(breathInterval, buffer, 256, 10);
+	makejson("breathInterval", buffer);
 	htmlReply += ",\n";
 	_itoa_s(simmgr_shm->server.dbg2, buffer, 256, 10);
 	makejson("debug2", buffer);
