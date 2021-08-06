@@ -465,7 +465,7 @@ resetAllParameters(void)
 #define BREATH_CALC_LIMIT		4		// Max number of recorded breaths to count in calculation
 #define BREATH_LOG_LEN			32
 ULONGLONG breathLog[BREATH_LOG_LEN] = { 0, };
-ULONGLONG breathLogNext = 0;
+int breathLogNext = 0;
 
 #define BREATH_LOG_STATE_IDLE	0
 #define BREATH_LOG_STATE_DETECT	1
@@ -729,7 +729,7 @@ shock_check(void)
 #define HR_CALC_LIMIT		10		// Max number of recorded beats to count in calculation
 #define HR_LOG_LEN			32
 ULONGLONG hrLog[HR_LOG_LEN] = { 0, };
-ULONGLONG hrLogNext = 0;
+int hrLogNext = 0;
 ULONGLONG hrLogLastNatural = 0;	// beatCount, last natural
 ULONGLONG hrLogLastVPC = 0;	// VPC count, last VPC
 
