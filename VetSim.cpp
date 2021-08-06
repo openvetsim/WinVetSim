@@ -137,7 +137,7 @@ int vetsim()
 		printf("Could not start PHP Server\n" );
 		sprintf_s(msg_buf, BUF_SIZE, "%s", "Could not start PHP Server");
 		log_message("", msg_buf);
-		exit(-1);
+		exit(202);
 	}
 	// Open web page
 	sprintf_s(cmd, BUF_SIZE, "start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );
@@ -172,7 +172,7 @@ int vetsim()
 	}
 	printf("Exiting\n" );
 	stopPHPServer();
-	exit(0);
+	exit(201);
 }
 
 void
@@ -463,7 +463,7 @@ resetAllParameters(void)
  *
 */
 #define BREATH_CALC_LIMIT		4		// Max number of recorded breaths to count in calculation
-#define BREATH_LOG_LEN	128
+#define BREATH_LOG_LEN			32
 ULONGLONG breathLog[BREATH_LOG_LEN] = { 0, };
 ULONGLONG breathLogNext = 0;
 
@@ -502,7 +502,7 @@ void
 awrr_check(void)
 {
 	ULONGLONG now = simmgr_shm->server.msec_time; //  time(NULL);	// Current sec time
-	ULONGLONG prev;
+	int prev;
 	int breaths;
 	ULONGLONG totalTime;
 	ULONGLONG lastTime;
@@ -562,7 +562,7 @@ awrr_check(void)
 	firstTime = 0;
 	if (breathLogNext == 0)
 	{
-		prev = BREATH_LOG_LEN - 1;
+		prev = (BREATH_LOG_LEN - 1);
 	}
 	else
 	{
@@ -727,7 +727,7 @@ shock_check(void)
  *
 */
 #define HR_CALC_LIMIT		10		// Max number of recorded beats to count in calculation
-#define HR_LOG_LEN	128
+#define HR_LOG_LEN			32
 ULONGLONG hrLog[HR_LOG_LEN] = { 0, };
 ULONGLONG hrLogNext = 0;
 ULONGLONG hrLogLastNatural = 0;	// beatCount, last natural
@@ -742,17 +742,17 @@ int hrLogReportLoops = 0;
 void hrcheck_handler(void )     // current system time  )    // additional information 
 {
 	ULONGLONG now; // Current msec time
-	ULONGLONG prev;
+	int prev;
 	int beats;
 	ULONGLONG totalTime;
 	ULONGLONG lastTime;
 	ULONGLONG firstTime;
-	ULONGLONG diff;
-	float avg_rate;
+	ULONGLONG diff = 0;
+	float avg_rate = -10;
 	float seconds;
 	float minutes;
 	int i;
-	int intervals;
+	int intervals = -1;
 	/*
 	int oldRate;
 	int newRate;
@@ -803,8 +803,10 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 			prev = (HR_LOG_LEN - 1);
 		}
 	}
+
 	if (hrLogReportLoops++ >= HR_LOG_CHANGE_LOOPS)
 	{
+		avg_rate = -9;
 		hrLogReportLoops = 0;
 		// AVG Calculation - Look at no more than 10 beats - Skip if no beats within 20 seconds
 		lastTime = 0;
@@ -816,11 +818,11 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 		lastTime = hrLog[prev];
 		if (lastTime < 0)  // Don't look at empty logs
 		{
-			simmgr_shm->status.cardiac.avg_rate = 2;
+			avg_rate = -2;
 		}
 		else if (lastTime == 0)  // Don't look at empty logs
 		{
-			simmgr_shm->status.cardiac.avg_rate = 3;
+			avg_rate = -3;
 		}
 		else
 		{
@@ -831,11 +833,15 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 			}
 			else
 			{
-				prev -= 1;
-				if (prev < 0)
+				if (prev <= 0)
 				{
 					prev = (HR_LOG_LEN - 1);
 				}
+				else
+				{
+					prev -= 1;
+				}
+
 				for (i = 0; i < HR_CALC_LIMIT; i++)
 				{
 					diff = now - hrLog[prev];
@@ -851,7 +857,7 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 						prev -= 1;
 						if (prev < 0)
 						{
-							prev = HR_LOG_LEN - 1;
+							prev = (HR_LOG_LEN - 1);
 						}
 					}
 				}
@@ -862,7 +868,7 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 				totalTime = lastTime - firstTime;
 				if (totalTime == 0)
 				{
-					avg_rate = 7;
+					avg_rate = -7;
 				}
 				else
 				{
@@ -872,7 +878,7 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 				}
 				if (avg_rate < 0)
 				{
-					avg_rate = 6;
+					avg_rate = -6;
 				}
 				else if (avg_rate > 360)
 				{
@@ -881,10 +887,25 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 			}
 			else
 			{
-				avg_rate = 5;
+				avg_rate = -5;
 			}
+		}
+		if (avg_rate < 0)
+		{
+			simmgr_shm->status.cardiac.avg_rate = 0;
+		}
+		else
+		{
 			simmgr_shm->status.cardiac.avg_rate = (int)round(avg_rate);
 		}
+#ifdef DEBUG
+		if (simmgr_shm->status.cardiac.avg_rate < 7)
+		{
+			sprintf_s(msg_buf, BUF_SIZE, "HRCHECK: avg_rate %f Intervals %d NewBeat %d, hrLogNext %lld, diff %f ",
+				avg_rate, intervals, newBeat, hrLogNext, diff);
+			log_message("", msg_buf);
+		}
+#endif
 	}
 }
 /*

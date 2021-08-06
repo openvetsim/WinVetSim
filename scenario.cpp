@@ -434,6 +434,7 @@ scenario_main(void)
 			loopCount = 0;
 		}
 	}
+	printf("Exit scenario_main");
 	return(0);
 }
 

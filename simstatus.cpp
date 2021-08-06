@@ -300,6 +300,7 @@ simstatusMain(void)
 			ExitProcess(0);
 		}
 	}
+	exit(203);
 }
 /*
 Parse Samples:

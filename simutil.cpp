@@ -110,7 +110,7 @@ void log_message(const char* filename, const char* message)
 		fclose(logfile);
 	}
 
-	//	printf("%s\n", message);
+	// printf("%s\n", message);
 	// OutputDebugStringA(message);
 }
 

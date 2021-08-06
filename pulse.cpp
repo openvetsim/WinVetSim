@@ -69,7 +69,7 @@ extern struct simmgr_shm shmSpace;
 #include <sys/socket.h>
 #include <arpa/inet.h>
 */
- // #define DEBUG
+// #define DEBUG
 #define BUF_SIZE 2048
 char p_msg[BUF_SIZE];
 
@@ -253,7 +253,7 @@ calculateVPCFreq(void)
 			}
 		}
 #ifdef DEBUG
-		sprintf(p_msg, "calculateVPCFreq: request %d: result %d", currentVpcFreq, count);
+		sprintf_s(p_msg, "calculateVPCFreq: request %d: result %d", currentVpcFreq, count);
 		log_message("", p_msg);
 #endif
 		vpcFrequencyIndex = 0;
@@ -540,7 +540,7 @@ pulseTask(void )
 	}
 	sprintf_s(p_msg, BUF_SIZE, "simpulse terminates");
 	log_message("", p_msg);
-	exit(0);
+	exit(222);
 }
 
 /*
@@ -660,6 +660,8 @@ pulseTimer(void)
 			}
 		}
 	}
+	printf("pulseTimer Exit\n");
+	exit(205);
 }
 void
 pulseBroadcastLoop(void)
@@ -687,7 +689,6 @@ pulseBroadcastLoop(void)
 		{
 			last_pulse = simmgr_shm->status.cardiac.pulseCount;
 			count = broadcast_word(pulseWord);
-
 			if (count)
 			{
 #ifdef DEBUG
@@ -728,6 +729,8 @@ pulseBroadcastLoop(void)
 #endif
 		}
 	}
+	printf("pulseBroadcastLoop exit\n");
+	exit(206);
 }
 void
 pulseProcessChild(void)
@@ -754,7 +757,7 @@ pulseProcessChild(void)
 			currentPulseRate = simmgr_shm->status.cardiac.rate;
 			pulseSema.unlock();
 #ifdef DEBUG
-			sprintf(p_msg, "Set Pulse to %d", currentPulseRate);
+			sprintf_s(p_msg, "Set Pulse to %d", currentPulseRate);
 			log_message("", p_msg);
 #endif
 		}
@@ -801,9 +804,11 @@ pulseProcessChild(void)
 			// awRR Calculation - TBD - Need real calculations
 			//simmgr_shm->status.respiration.awRR = simmgr_shm->status.respiration.rate;
 #ifdef DEBUG
-			sprintf(p_msg, "Set Breath to %d", currentBreathRate);
+			sprintf_s(p_msg, "Set Breath to %d", currentBreathRate);
 			log_message("", p_msg);
 #endif
 		}
 	}
+	printf("pulseProcessChild Exit");
+	exit(204);
 }
