@@ -22,35 +22,7 @@
 */
 
 #include "vetsim.h"
-/*
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <execinfo.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <syslog.h>
-#include <string.h>
-#include <ctype.h>
 
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#include <sys/ioctl.h>
-#include <netdb.h>
-#include <ifaddrs.h>
-#include <netinet/in.h>
-#include <net/if.h>
-#include <arpa/inet.h>
-
-#include <sys/ipc.h>
-#include <sys/msg.h>
-#include <time.h>
-#include <errno.h>
-#include <sys/mman.h>
-#include <semaphore.h>
-#include <termios.h>
-*/
 #define SIMUTIL	1
 
 extern char msg_buf[];
@@ -183,8 +155,9 @@ do_command_read(const char* cmd_str, char* buffer, int max_len)
 	}
 	return (cp);
 }
+
 void
-get_date(char* buffer, int maxLen)
+get_date(char* buffer, int maxLen )
 {
 	struct tm newtime;
 	__time64_t long_time;
@@ -194,6 +167,7 @@ get_date(char* buffer, int maxLen)
 
 	// Get time as 64-bit integer.
 	_time64(&long_time);
+
 	// Convert to local time.
 	err = _localtime64_s(&newtime, &long_time);
 	if (err)

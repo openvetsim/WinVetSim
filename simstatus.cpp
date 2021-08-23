@@ -406,12 +406,13 @@ simstatusHandleCommand(char *args)
 	htmlReply += "{\n";
 	map<int, argument>::iterator itr;
 	//cout << "\tKey\tValue\n";
-	for (itr = argList.begin(); itr != argList.end(); ++itr) {
-		arg = itr->second;
+
+	//for (itr = argList.begin(); itr != argList.end(); ++itr) {
+	//	arg = itr->second;
 		//cout << '\t' << arg.key	<< '\t' << arg.value << '\n';
-		makejson(arg.key, arg.value);
-		htmlReply += ",\n";
-	}
+	//	makejson(arg.key, arg.value);
+	//	htmlReply += ",\n";
+	//}
 	//cout << endl;
 
 	//get_date(buffer, sizeof(buffer));
@@ -544,7 +545,8 @@ simstatusHandleCommand(char *args)
 		{
 			get_date(buffer, sizeof(buffer));
 			makejson("date", buffer);
-			//makejson("date", simmgr_shm->server.server_time );
+			//htmlReply += ",\n";
+			//makejson("date_t", simmgr_shm->server.server_time );
 		}
 		
 		else if (key.compare("ip") == 0)

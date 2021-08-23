@@ -312,7 +312,7 @@ resetAllParameters(void)
 	simmgr_shm->status.respiration.etco2 = 34;
 	simmgr_shm->status.respiration.etco2_indicator = 0;
 	simmgr_shm->status.respiration.spo2_indicator = 0;
-	simmgr_shm->status.respiration.chest_movement = 1;
+	simmgr_shm->status.respiration.chest_movement = 0;
 	simmgr_shm->status.respiration.manual_breath = 0;
 	simmgr_shm->status.respiration.manual_count = 0;
 	awrr_restart();
