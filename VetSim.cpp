@@ -258,7 +258,8 @@ simmgrInitialize(void)
 
 	clearAllTrends();
 
-	timer_start(hrcheck_handler, 10 );
+	timer_start(hrcheck_handler, 5 );
+	timer_start(awrr_check, 10);
 }
 
 void
@@ -463,7 +464,7 @@ resetAllParameters(void)
  *
 */
 #define BREATH_CALC_LIMIT		4		// Max number of recorded breaths to count in calculation
-#define BREATH_LOG_LEN			32
+#define BREATH_LOG_LEN			128
 ULONGLONG breathLog[BREATH_LOG_LEN] = { 0, };
 int breathLogNext = 0;
 
@@ -513,6 +514,7 @@ awrr_check(void)
 	int intervals;
 	int oldRate;
 	int newRate;
+	//int setRate;
 
 	oldRate = simmgr_shm->status.respiration.awRR;
 
@@ -560,6 +562,7 @@ awrr_check(void)
 	// AWRR Calculation - Look at no more than BREATH_CALC_LIMIT breaths - Skip if no breaths within 20 seconds
 	lastTime = 0;
 	firstTime = 0;
+
 	if (breathLogNext == 0)
 	{
 		prev = (BREATH_LOG_LEN - 1);
@@ -642,7 +645,17 @@ awrr_check(void)
 			if (oldRate != newRate)
 			{
 				// setRespirationPeriods(oldRate, newRate );
-				simmgr_shm->status.respiration.awRR = newRate;
+/*
+				setRate = simmgr_shm->status.respiration.rate;
+				if ((newRate <= (setRate + 3)) &&
+					(newRate >= (setRate - 3)))
+				{
+					simmgr_shm->status.respiration.awRR = setRate;
+				}
+				else */
+				{
+					simmgr_shm->status.respiration.awRR = newRate;
+				}
 			}
 		}
 	}
@@ -753,10 +766,9 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 	float minutes;
 	int i;
 	int intervals = -1;
-	/*
-	int oldRate;
+	// int oldRate;
 	int newRate;
-	*/
+	//int setRate;
 	int newBeat = 0;
 	static int reports = 0;
 	hrCheckCount++;
@@ -896,7 +908,17 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 		}
 		else
 		{
-			simmgr_shm->status.cardiac.avg_rate = (int)round(avg_rate);
+			newRate = (int)round(avg_rate);
+			/* setRate = simmgr_shm->status.cardiac.rate;
+			if ((newRate <= (setRate + 3)) &&
+				(newRate >= (setRate - 3)))
+			{
+				simmgr_shm->status.cardiac.avg_rate = setRate;
+			}
+			else */
+			{
+				simmgr_shm->status.cardiac.avg_rate = newRate;
+			}
 		}
 #ifdef DEBUG
 		if (simmgr_shm->status.cardiac.avg_rate < 7)
@@ -2149,7 +2171,7 @@ simmgrRun(void)
 		shock_check();
 		break;
 	case SCENARIO_AWRRCHECK:
-		awrr_check();
+		//awrr_check();
 		break;
 	case SCENARIO_TIMECHECK:
 		time_update();

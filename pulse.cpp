@@ -638,7 +638,7 @@ pulseTimer(void)
 	ULONGLONG now2;
 	while (1)
 	{
-		Sleep(1);
+		Sleep(10);
 		now = simmgr_shm->server.msec_time;
 		if (nextPulseTime <= now)
 		{
@@ -650,13 +650,15 @@ pulseTimer(void)
 				nextPulseTime = now2;
 			}
 		}
+		now = simmgr_shm->server.msec_time;
 		if (nextBreathTime <= now)
 		{
 			breath_beat_handler();
 			nextBreathTime += breathInterval;
-			if (nextBreathTime <= now)
+			now2 = simmgr_shm->server.msec_time;
+			if (nextBreathTime <= (now2+1))
 			{
-				nextBreathTime = now + breathInterval;
+				nextBreathTime = now2 + breathInterval;
 			}
 		}
 	}
