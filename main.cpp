@@ -25,6 +25,8 @@
 #define _WIN32_WINNT _WIN32_WINNT_MAXVER
 #include "version.h"
 
+int checkProcessRunning(void);
+
 #ifdef NDEBUG
 // Windows Header Files
 #include <stdlib.h>
@@ -32,7 +34,7 @@
 #include <tchar.h>
 #include <strsafe.h>
 #include <afxwin.h>
-
+#include <tlhelp32.h>
 
 // C RunTime Header Files
 #include <malloc.h>
@@ -64,7 +66,6 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void ErrorExit(LPCTSTR lpszFunction);
 
-
 //using namespace System::Windows::Forms;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -75,6 +76,17 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	int sts;
 
+	sts = checkProcessRunning();
+	if (sts == 0)
+	{
+		MessageBox(0, L"WinVetSim process not found", L"Error!", MB_ICONSTOP | MB_OK);
+		exit(-1);
+	}
+	if (sts != 1)
+	{
+		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
+		exit(-1);
+	}
 	ghInstance = hInstance;
 
 	WNDCLASSEX wcex;
@@ -346,6 +358,19 @@ int main(int argc, char *argv[] )
 {
 	int i;
 	char *ptr;
+	int sts;
+
+	sts = checkProcessRunning();
+	if (sts == 0)
+	{
+		MessageBox(0, L"WinVetSim process not found", L"Error!", MB_ICONSTOP | MB_OK);
+		exit(-1);
+	}
+	if (sts != 1)
+	{
+		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
+		exit(-1);
+	}
 
 	if (argc > 1)
 	{
@@ -382,3 +407,32 @@ int main(int argc, char *argv[] )
 }
 
 #endif
+
+#include <comdef.h>
+int checkProcessRunning(void)
+{
+	PROCESSENTRY32 entry;
+	entry.dwSize = sizeof(PROCESSENTRY32);
+	int count = 0;
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+	if (Process32First(snapshot, &entry) == TRUE)
+	{
+		while (Process32Next(snapshot, &entry) == TRUE)
+		{
+			_bstr_t b(entry.szExeFile);
+			const char* c = b;
+
+			if (_stricmp(c, "WinVetSim.exe") == 0)
+			{
+				//HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, entry.th32ProcessID);
+				// Do stuff..
+				// CloseHandle(hProcess);
+				count++;
+			}
+		}
+	}
+	CloseHandle(snapshot);
+	return count;
+}

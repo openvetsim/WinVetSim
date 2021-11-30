@@ -428,7 +428,7 @@ pulseTask(void )
 	struct sockaddr client_addr;
 	int socklen;
 	WSADATA w;
-
+	int found;
 	printf("Pulse is on port %d\n", portno);
 
 	// Seed rand, needed for vpc array generation
@@ -506,29 +506,55 @@ pulseTask(void )
 		cfd = accept(sfd, (struct sockaddr*)&client_addr, &socklen);
 		if (cfd >= 0)
 		{
+			char newIpAddr[STR_SIZE];
+			sprintf_s(newIpAddr, STR_SIZE, "%d.%d.%d.%d",
+				client_addr.sa_data[2] & 0xff,
+				client_addr.sa_data[3] & 0xff,
+				client_addr.sa_data[4] & 0xff,
+				client_addr.sa_data[5] & 0xff
+			);
+			// Check for reopen from an existing controller
+			found = 0;
 			for (i = 0; i < MAX_LISTENERS; i++)
 			{
-				if (listeners[i].allocated == 0)
+				if (listeners[i].allocated == 1 && strcmp(newIpAddr, simmgr_shm->simControllers[i].ipAddr) == 0)
 				{
-					listeners[i].allocated = 1;
+					closesocket(listeners[i].cfd);
 					listeners[i].cfd = cfd;
-					listeners[i].thread_no = i;
-					simmgr_shm->simControllers[i].allocated = 1;
-					sprintf_s(simmgr_shm->simControllers[i].ipAddr, STR_SIZE, "%d.%d.%d.%d",
-						client_addr.sa_data[2] & 0xff,
-						client_addr.sa_data[3] & 0xff,
-						client_addr.sa_data[4] & 0xff,
-						client_addr.sa_data[5] & 0xff
-						);
-					printf("%d.%d.%d.%d\n",
-						client_addr.sa_data[2] & 0xff,
-						client_addr.sa_data[3] & 0xff,
-						client_addr.sa_data[4] & 0xff,
-						client_addr.sa_data[5] & 0xff
-					);
+					found = 1;
+					printf("ReOpened: %s\n", newIpAddr);
 					// Send the Status Port Number to the listener
 					sendStatusPort(i);
 					break;
+				}
+			}
+			if (found == 0)
+			{
+				for (i = 0; i < MAX_LISTENERS; i++)
+				{
+					if (listeners[i].allocated == 0)
+					{
+						listeners[i].allocated = 1;
+						listeners[i].cfd = cfd;
+						listeners[i].thread_no = i;
+						simmgr_shm->simControllers[i].allocated = 1;
+						sprintf_s(simmgr_shm->simControllers[i].ipAddr, STR_SIZE, "%d.%d.%d.%d",
+							client_addr.sa_data[2] & 0xff,
+							client_addr.sa_data[3] & 0xff,
+							client_addr.sa_data[4] & 0xff,
+							client_addr.sa_data[5] & 0xff
+						);
+						printf("%d.%d.%d.%d\n",
+							client_addr.sa_data[2] & 0xff,
+							client_addr.sa_data[3] & 0xff,
+							client_addr.sa_data[4] & 0xff,
+							client_addr.sa_data[5] & 0xff
+						);
+						// Send the Status Port Number to the listener
+						sendStatusPort(i);
+						found = 1;
+						break;
+					}
 				}
 			}
 			if (i == MAX_LISTENERS)
