@@ -514,6 +514,7 @@ extern char* program_invocation_short_name;
 
 void pulseProcessChild(void);
 int pulseTask(void);
+void resetVpc(void);
 
 int scenario_main(void);
 

@@ -124,6 +124,14 @@ ULONGLONG nextPulseTime = 0;
 ULONGLONG breathInterval = 0;
 ULONGLONG pulseInterval = 0;
 
+void
+resetVpc(void)
+{
+	beatPhase = 0;
+	vpcState = 0;
+	vpcCount = 0;
+}
+
 /* vpcState is set at the beginning of a sinus cycle where VPCs will follow.
 	vpcState is set to the number of VPCs to be injected.
 

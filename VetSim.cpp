@@ -269,8 +269,9 @@ resetAllParameters(void)
 	sprintf_s(simmgr_shm->status.cardiac.rhythm, STR_SIZE, "%s", "sinus");
 	sprintf_s(simmgr_shm->status.cardiac.vpc, STR_SIZE, "%s", "none");
 	sprintf_s(simmgr_shm->status.cardiac.vfib_amplitude, STR_SIZE, "%s", "high");
-	simmgr_shm->status.cardiac.vpc_freq = 10;
+	simmgr_shm->status.cardiac.vpc_freq = 0;
 	simmgr_shm->status.cardiac.vpc_delay = 0;
+	resetVpc();
 	simmgr_shm->status.cardiac.pea = 0;
 	simmgr_shm->status.cardiac.rate = 80;
 	simmgr_shm->status.cardiac.nibp_rate = 80;
@@ -1535,6 +1536,7 @@ scan_commands(void)
 			break;
 		default:
 			simmgr_shm->status.cardiac.vpc_type = 0;
+			resetVpc();
 			break;
 		}
 		switch (simmgr_shm->status.cardiac.vpc[2])
@@ -1551,6 +1553,7 @@ scan_commands(void)
 		default:
 			simmgr_shm->status.cardiac.vpc_count = 0;
 			simmgr_shm->status.cardiac.vpc_type = 0;
+			resetVpc();
 			break;
 		}
 	}
