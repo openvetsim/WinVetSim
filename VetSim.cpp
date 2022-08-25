@@ -101,7 +101,44 @@ void SignalHandler(int signal)
 }
 
 int getKeys(void);
+HANDLE hComm = NULL;
+int pulseState = 0;
+int pulseStateCount = 0;;
+void
+setPulseState(int val)
+{
+	if (hComm)
+	{
+		switch (val)
+		{
+		case 1:
+			EscapeCommFunction(hComm, SETRTS);
+			pulseState = 1;
+			break;
+		case 0:
+			EscapeCommFunction(hComm, CLRRTS);
+			pulseState = 0;
+			break;
+		default:	// Toggle
+			if (pulseState == 1)
+				setPulseState(0);
+			else
+				setPulseState(1);
+			break;
+		}
+		//pulseStateCount++;
+		//if (pulseStateCount > 100)
+		//{
+		//	
+		//	WriteFile(hComm, "MsgeOUt", 1, &byteswritten, NULL);
+		//	cout << "MsgeOUt" << endl;
+		//	pulseStateCount = 0;
+		//}
 
+		//DWORD byteswritten;
+		//WriteFile(hComm, "\n", 1, &byteswritten, NULL);
+	}
+}
 int vetsim()
 {
 	int last = -1;
@@ -110,7 +147,64 @@ int vetsim()
 	extern struct obsData obsd;
 	setvbuf(stdout, NULL, _IONBF, 0);
 	char cmd[BUF_SIZE];
-
+	
+#ifdef DO_COMM
+	LPCWSTR pcCommPort = L"COM5";
+//	TCHAR *pcCommPort = TEXT("COM3");
+	std::cout << "Opening COMM Port 5" << endl;
+	hComm = CreateFile(pcCommPort,
+		GENERIC_READ | GENERIC_WRITE,
+		0,
+		NULL,
+		OPEN_EXISTING,
+		0, // FILE_FLAG_OVERLAPPED,
+		NULL );
+	if (hComm == INVALID_HANDLE_VALUE)
+	{
+		//std::cout << "ER!" << endl;// error opening port; abort
+		//std::cout << GetLastError();
+		DWORD error = GetLastError();
+		cout << "CreateFile returns " << hComm << " : " << error << " : " << std::system_category().message(error) << endl;
+		
+		if (GetLastError() == 2)
+		{
+			std::cout << "Port 5 is not available!" << endl;
+		}
+		if (GetLastError() == 5)
+		{
+			//std::cout << "Port 3 is already taken!" << endl;
+			std::string message = std::system_category().message(error);
+			std::cout << message << endl;
+		}
+		
+		return false;
+	}
+	else
+	{
+		std::cout << "COM5 is available." << endl;  // And reday to use (TX/RX)
+	}
+	// Disable the RTS line.
+	struct _DCB mComDCB;
+	char msg[256];
+	LPCWSTR instr = L"baud=115384 parity=N data=8 stop=1";
+	if (!BuildCommDCB(instr, &mComDCB))
+	{
+		UINT error = GetLastError();
+		sprintf_s(msg, "SetPortStatus: BuildCommDCB failed: GetLastError = %d", error);
+		std::cout <<  msg << endl;
+		return false;
+	}
+	mComDCB.fAbortOnError = (DWORD)1;
+	mComDCB.fTXContinueOnXoff = (DWORD)1;
+	mComDCB.fRtsControl = RTS_CONTROL_DISABLE;
+	if (!(SetCommState(hComm, &mComDCB)))
+	{
+		UINT error = GetLastError();
+		sprintf_s(msg, "SetPortStatus: SetCommState failed: GetLastError = %d", error);
+		std::cout << msg << endl;
+	}
+	EscapeCommFunction(hComm, SETRTS);
+#endif	
 	// Set configurable parameters to defaults
 	localConfig.port_pulse = DEFAULT_PORT_PULSE;
 	localConfig.port_status = DEFAULT_PORT_STATUS;
@@ -2081,17 +2175,17 @@ start_scenario(void)
 		sprintf_s(simmgr_shm->status.scenario.runtimeScenario, STR_SIZE, "%s", "00:00:00");
 		sprintf_s(simmgr_shm->status.scenario.runtimeScene, STR_SIZE, "%s", "00:00:00");
 		simmgr_shm->status.scenario.error_flag = 0;
+		std::thread::id tid;
+		tid = start_task("scenario_main", scenario_main);
 
-		sts = start_task("scenario_main", scenario_main);
-
-		if (sts)
-		{
-			updateScenarioState(ScenarioState::ScenarioStopped);
-		}
-		else
-		{
+		//if (!tid)
+		//{
+		//	updateScenarioState(ScenarioState::ScenarioStopped);
+		//}
+		//else
+		//{
 			updateScenarioState(ScenarioState::ScenarioRunning);
-		}
+		//}
 	}
 	return (0);
 }

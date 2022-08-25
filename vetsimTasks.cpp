@@ -25,7 +25,7 @@
 using namespace std;
 
 // Start a task to run once. Might run forever.
-int start_task(const char* name, std::function<void(void)> func)
+std::thread::id start_task(const char* name, std::function<void(void)> func)
 {
 	std::thread::id id;
 
@@ -33,9 +33,8 @@ int start_task(const char* name, std::function<void(void)> func)
 	proc.detach();
 	id = proc.get_id();
 	cout << "Task Started: " << name << " " << id << endl;
-	return (0);
+	return (id);
 }
-
 
 // Start a task to run every "interval" msec
 void timer_start(std::function<void(void)> func, unsigned int interval)

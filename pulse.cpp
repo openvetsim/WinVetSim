@@ -144,6 +144,8 @@ resetVpc(void)
 		From VPC2 to VPC3:		7
 		From VPC3 to Sinus:		19
 */
+extern void setPulseState(int);
+
 static void
 pulse_beat_handler(void)
 {
@@ -218,6 +220,7 @@ pulse_beat_handler(void)
 		else
 		{
 			simmgr_shm->status.cardiac.pulseCount++;
+			setPulseState(2);
 		}
 	}
 	//pulseSema.unlock();
@@ -438,6 +441,20 @@ pulseTask(void )
 	WSADATA w;
 	int found;
 	printf("Pulse is on port %d\n", portno);
+
+	
+
+	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+	{
+		DWORD dwError;
+		dwError = GetLastError();
+		_tprintf(TEXT("Failed to enter background mode (%d)\n"), dwError);
+	}
+
+	DWORD dwThreadPri;
+	dwThreadPri = GetThreadPriority(GetCurrentThread());
+	_tprintf(TEXT("pulseTask: Current thread priority is 0x%x\n"), dwThreadPri);
+
 
 	// Seed rand, needed for vpc array generation
 	srand(NULL);
@@ -668,11 +685,21 @@ broadcast_word(char* word)
 void
 pulseTimer(void)
 {
+	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+	{
+		DWORD dwError;
+		dwError = GetLastError();
+		_tprintf(TEXT("Failed to elevate priority (%d)\n"), dwError);
+	}
+	DWORD dwThreadPri;
+	dwThreadPri = GetThreadPriority(GetCurrentThread());
+	_tprintf(TEXT("pulseTimer: Current thread priority is 0x%x\n"), dwThreadPri);
+
 	ULONGLONG now;
 	ULONGLONG now2;
 	while (1)
 	{
-		Sleep(10);
+		Sleep(1);
 		now = simmgr_shm->server.msec_time;
 		if (nextPulseTime <= now)
 		{
@@ -702,6 +729,16 @@ pulseTimer(void)
 void
 pulseBroadcastLoop(void)
 {
+	if (!SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL))
+	{
+		DWORD dwError;
+		dwError = GetLastError();
+		_tprintf(TEXT("Failed to elevate priority (%d)\n"), dwError);
+	}
+	DWORD dwThreadPri;
+	dwThreadPri = GetThreadPriority(GetCurrentThread()); 
+	_tprintf(TEXT("pulseBroadcastLoop: Current thread priority is 0x%x\n"), dwThreadPri);
+
 	int count;
 	int portUpdateLoops = 0;
 	char pbuf[64];
