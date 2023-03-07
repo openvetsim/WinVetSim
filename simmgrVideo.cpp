@@ -30,12 +30,7 @@ using namespace std;
 struct obsData obsd = { NULL, 0, "" };
 
 DWORD processId;
-/**
- * recordStartStop
- * @record - Start if 1, Stop if 0
- *
- *
- */
+
 
 BOOL CALLBACK EnumWindowsProcMy(HWND hwnd, LPARAM lParam)
 {
@@ -89,7 +84,12 @@ getObsHandle(const char *appName )
 		CloseHandle(snapshot);
 	}
 }
-
+/**
+ * recordStartStop
+ * @record - Start if 1, Stop if 0
+ *
+ *
+ */
 int
 recordStartStop(int record)
 {

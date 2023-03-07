@@ -28,6 +28,8 @@
 
 #pragma comment(lib, "Ws2_32.lib") 
 
+#include <Windows.h>
+#include <atlbase.h>
 #include <iostream>
 #include <winbase.h>
 #include <direct.h>
@@ -37,9 +39,11 @@
 #include <strsafe.h>
 #include <Lmcons.h>
 #include <time.h>
+#include <iomanip>
 #include <synchapi.h>
 #include <string.h>
 #include <csignal>
+#include <debugapi.h>
 
 #include <tchar.h>
 
@@ -449,7 +453,7 @@ struct trend
 // 
 int	initSHM(int create, char* sesid);
 void log_message(const char* filename, const char* message);
-void log_messaget(const char* filename, TCHAR* message);
+//void log_messaget(const char* filename, TCHAR* message);
 char* do_command_read(const char* cmd_str, char* buffer, int max_len);
 void get_date(char* buffer, int maxLen);
 char* getETH0_IP();

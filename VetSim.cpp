@@ -2097,6 +2097,10 @@ start_scenario_log(void)
 
 	(void)simlog_create();
 }
+
+#define OBS_START_SLEEP_TIME	100
+#define OBS_START_WAIT_LOOPS	100
+
 int
 start_scenario(void)
 {
@@ -2115,6 +2119,7 @@ start_scenario(void)
 	{
 		fileCountBefore = getVideoFileCount();
 		printf("File Count Before is %d\n", fileCountBefore);
+		sprintf_s(simmgr_shm->status.scenario.error_message, "Starting Video Recording: %s", "");
 		sts = recordStartStop(1);
 		if (sts != 0)
 		{
@@ -2139,7 +2144,7 @@ start_scenario(void)
 						break;
 					}
 				}
-				if (tryCount++ > 50)
+				if (tryCount++ > OBS_START_WAIT_LOOPS)
 				{
 					log_message("", "timed out Waiting for Video File\n");
 					sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Timed Out Waiting for Video File");
@@ -2147,7 +2152,7 @@ start_scenario(void)
 					updateScenarioState(ScenarioState::ScenarioStopped);
 					break;
 				}
-				Sleep(500);
+				Sleep(OBS_START_SLEEP_TIME);
 			}
 		}
 	}
@@ -2162,7 +2167,7 @@ start_scenario(void)
 	else
 	{
 		// start the new scenario
-
+		printf("Video started after wait of %0.2f seconds.\n", (OBS_START_SLEEP_TIME * (double)tryCount) / 1000);
 		scenario_start_time = time(nullptr);
 		sprintf_s(msg_buf, BUF_SIZE, "Start Scenario: %s", simmgr_shm->status.scenario.active);
 		simlog_entry(msg_buf);

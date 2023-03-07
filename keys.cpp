@@ -294,13 +294,16 @@ readSubKeys(void)
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
 		data = localConfig.php_server_port;
-		Ret = WriteInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"ServersPortNum", data);
+		Ret = WriteInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"ServerPortNum", data);
 	}
 	else if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.php_server_port = data;
 	}
-
+	else
+	{
+		printf("Ret of %d is not decoded\n", Ret);
+	}
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", stringBuf, STR_SIZE);
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
@@ -368,7 +371,7 @@ int getKeys()
 	}
 	else
 	{
-		cout << "Cannot open registry key " << "SOFTWARE\\WinVetSim" << endl << "\tERROR: " << sts << GetLastErrorAsString() << endl;
+		
 		rval = -1;
 	}
 	if (rval >= 0)

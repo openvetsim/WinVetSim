@@ -49,8 +49,26 @@ initSHM(int create, char* sesid)
 
 	return (0);
 }
+/*
+ * Function: getTimeStr
+ *
+ * Get the current timestamp for logging
+ *
+ * Parameters: pointer to buffer to receive the timestamp
+ *
+ * Returns: pointer to buffer to receive the timestamp
+ */
+char *
+getTimeStr(char* timeStr)
+{
+	time_t timer;
+	struct tm tm_info;
 
-
+	timer = time(NULL);
+	localtime_s(&tm_info, &timer);
+	strftime(timeStr, 26, "%Y-%m-%d %H:%M:%S", &tm_info);
+	return(timeStr);
+}
 /*
  * Function: log_message
  *
@@ -68,6 +86,13 @@ void log_message(const char* filename, const char* message)
 {
 	FILE* logfile;
 	errno_t err;
+	char timeBuf[32];
+	LPCSTR lpMessage;
+	size_t convertedChars = 0;
+	wchar_t wcstring[512];
+	size_t origionalSize = strlen(message) + 1;
+	size_t maxSize = 512;
+
 	if (strlen(filename) > 0 )
 	{
 		err = fopen_s(&logfile, filename, "a");
@@ -78,38 +103,55 @@ void log_message(const char* filename, const char* message)
 	}
 	if (logfile)
 	{
-		fprintf(logfile, "%s\n", message);
+		(void)getTimeStr(timeBuf);
+		fprintf(logfile, "%s: %s\n", timeBuf, message);
 		fclose(logfile);
 	}
 
-	// printf("%s\n", message);
-	// OutputDebugStringA(message);
+	//lpMessage = message;
+	err = mbstowcs_s(&convertedChars,
+						wcstring, 
+						origionalSize, 
+						message,
+						maxSize );
+
+	//printf("%s\n", message);
+	//OutputDebugStringA(lpMessage);
+	//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
+#ifdef NDEBUG
+	HFONT hFont, hOldFont;
+	extern HWND mainWindow;
+	HDC hdc;
+	PAINTSTRUCT ps;
+	hdc = BeginPaint(mainWindow, &ps);
+
+	// Retrieve a handle to the variable stock font.  
+	hFont = (HFONT)GetStockObject(ANSI_VAR_FONT);
+
+	// Select the variable stock font into the specified device context. 
+	if (hOldFont = (HFONT)SelectObject(hdc, hFont))
+	{
+		// Display the text string.  
+		TextOut(hdc, 5, 40, wcstring, convertedChars);
+
+		// Restore the original font.        
+		SelectObject(hdc, hOldFont);
+	}
+	EndPaint(mainWindow, &ps);
+#endif
 }
 
-void log_messaget(const char* filename, TCHAR* message)
-{
-	FILE* logfile;
-	errno_t err;
-	if (strlen(filename) > 0)
-	{
-		err = fopen_s(&logfile, filename, "a");
-	}
-	else
-	{
-		err = fopen_s(&logfile, LOG_NAME, "a");
-	}
-	if (logfile)
-	{
-#define MAX_LENGTH 500
-		char szString[MAX_LENGTH];
-		size_t nNumCharConverted;
-		wcstombs_s(&nNumCharConverted, szString, MAX_LENGTH,
-			message, MAX_LENGTH);
+//void log_messaget(const char* filename, TCHAR* message)
+//{
 
-		fprintf(logfile, "%s\n", szString);
-		fclose(logfile);
-	}
-}
+//#define MAX_LENGTH 500
+//	char szString[MAX_LENGTH];
+//	size_t nNumCharConverted;
+//	wcstombs_s(&nNumCharConverted, szString, MAX_LENGTH,
+//		message, MAX_LENGTH);
+
+//	log_message(filename, szString);
+//}
 
 // Issue a shell command and read the first line returned from it.
 

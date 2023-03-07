@@ -66,6 +66,8 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void ErrorExit(LPCTSTR lpszFunction);
 
+HWND mainWindow;
+
 //using namespace System::Windows::Forms;
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
@@ -122,7 +124,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	// NULL: this application does not have a menu bar
 	// hInstance: the first parameter from WinMain
 	// NULL: not used in this application
-	HWND hWnd = CreateWindow(
+	HWND hWnd = CreateWindowEx(
+		WS_EX_CLIENTEDGE,
 		szWindowClass,
 		szTitle,
 		WS_OVERLAPPEDWINDOW,
@@ -143,6 +146,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	ShowWindow(hWnd,
 		nCmdShow);
 	UpdateWindow(hWnd);
+	mainWindow = hWnd;
 
 	//CMenu menu;
 	//ASSERT(menu.LoadMenu(IDR_MENU1));
