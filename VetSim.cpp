@@ -264,7 +264,13 @@ int vetsim()
 		}
 		simmgrRun();
 	}
-	printf("Exiting\n" );
+#ifdef DEBUG
+	printf("Close window to exit\n" );
+	while (1)
+	{
+		Sleep(10);
+	}
+#endif
 	stopPHPServer();
 	exit(201);
 }

@@ -85,9 +85,9 @@ getTimeStr(char* timeStr)
 void log_message(const char* filename, const char* message)
 {
 	FILE* logfile;
+	//LPCSTR lpMessage;
 	errno_t err;
 	char timeBuf[32];
-	LPCSTR lpMessage;
 	size_t convertedChars = 0;
 	wchar_t wcstring[512];
 	size_t origionalSize = strlen(message) + 1;
@@ -132,7 +132,7 @@ void log_message(const char* filename, const char* message)
 	if (hOldFont = (HFONT)SelectObject(hdc, hFont))
 	{
 		// Display the text string.  
-		TextOut(hdc, 5, 40, wcstring, convertedChars);
+		TextOut(hdc, 5, 40, wcstring, (int)convertedChars);
 
 		// Restore the original font.        
 		SelectObject(hdc, hOldFont);
@@ -517,9 +517,15 @@ void signalHandler(int signum)
 	// terminate program
 	CloseHandle(php_pi.hProcess);
 	CloseHandle(php_pi.hThread);
-
+#ifdef DEBUG
+	printf("Close Window to Exit\n");
+	while (1)
+	{
+		Sleep(10);
+	}
+#else
 	exit(signum);
-
+#endif
 }
 
 LARGE_INTEGER

@@ -5,7 +5,7 @@
  *
  * This file is part of the WinVetSim distribution (https://github.com/OpenVetSimDevelopers/sim-mgr).
  *
- * Copyright (c) 2021 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
+ * Copyright (c) 2021-2023 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,22 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*
+ * Configuration parameters are now kept in the WinVetSim html direcotry, in the file winvetsim.ini
+ * This file provides a means to transfer previously set Registry keys to the .ini file. 
+ * 1 - Defaults are set at program start
+ * 2 - Values are read from the Registry
+ * 3 - Values are read from winvetsim.ini
+ * 4 - If a value for a setting is found in the .ini file, it is used.
+ * 5 - If an entry is missing the entry, the .ini file us updated to add it.
+ */
 // QueryKey - Enumerates the subkeys of key and its associated values.
 // hKey - Key whose subkeys and values are to be enumerated.
 
 #include "vetsim.h"
 #include <windows.h>
 #include <stdio.h>
+#include "ini.h"
 
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
@@ -103,6 +113,7 @@ void QueryKey(HKEY hKey)
 		wprintf(L"No values to be enumerated!\n");
 	}
 }
+
 BOOL writeStringInRegistry(HKEY hKeyParent, LPCWSTR subkey, LPCSTR valueName, char* strData, int len)
 {
 	DWORD Ret;
@@ -196,6 +207,7 @@ DWORD CreateRegistryKey(HKEY hKeyParent, LPCWSTR subkey)
 	}
 	return Ret;
 }
+
 //Read data from registry
 DWORD readDwordValueRegistry(HKEY hKeyParent, LPCWSTR subkey, LPCWSTR valueName, DWORD* readData)
 {
@@ -260,6 +272,24 @@ DWORD readStringFromRegistry(HKEY hKeyParent, LPCWSTR subkey, LPCSTR valueName, 
 
 	return (Ret);
 }
+
+void outputData(mINI::INIStructure const& ini)
+{
+	for (auto const& it : ini)
+	{
+		auto const& section = it.first;
+		auto const& collection = it.second;
+		std::cout << "[" << section << "]" << std::endl;
+		for (auto const& it2 : collection)
+		{
+			auto const& key = it2.first;
+			auto const& value = it2.second;
+			std::cout << key << "=" << value << std::endl;
+		}
+		std::cout << std::endl;
+	}
+}
+
 void
 readSubKeys(void)
 {
@@ -269,58 +299,29 @@ readSubKeys(void)
 	int len;
 
 	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"PulsePortNum", &data);
-	if (Ret == ERROR_FILE_NOT_FOUND)
-	{
-		data = localConfig.port_pulse;
-		Ret = WriteInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"PulsePortNum", data);
-	}
-	else if (Ret == ERROR_SUCCESS)
+	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.port_pulse = data;
 	}
 
 	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"StatusPortNum", &data);
-	if (Ret == ERROR_FILE_NOT_FOUND)
-	{
-		data = localConfig.port_status;
-		Ret = WriteInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"StatusPortNum", data);
-	}
-	else if (Ret == ERROR_SUCCESS)
+	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.port_status = data;
 	}
 
 	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"ServerPortNum", &data);
-	if (Ret == ERROR_FILE_NOT_FOUND)
-	{
-		data = localConfig.php_server_port;
-		Ret = WriteInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"ServerPortNum", data);
-	}
-	else if (Ret == ERROR_SUCCESS)
+	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.php_server_port = data;
 	}
-	else
-	{
-		printf("Ret of %d is not decoded\n", Ret);
-	}
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", stringBuf, STR_SIZE);
-	if (Ret == ERROR_FILE_NOT_FOUND)
-	{
-		len = (int)strlen(localConfig.php_server_addr);
-		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", localConfig.php_server_addr, len );
-	}
-	else
+	if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.php_server_addr, "%s", stringBuf);
 	}
 	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "LogName", stringBuf, STR_SIZE);
-	if (Ret == ERROR_FILE_NOT_FOUND)
-	{
-		len = (int)strlen(localConfig.log_name);
-		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "LogName", localConfig.log_name, len);
-	}
-	else
+	if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.log_name, "%s", stringBuf);
 	}
@@ -331,7 +332,7 @@ readSubKeys(void)
 		len = (int)strlen(localConfig.html_path);
 		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "HTML_Path", localConfig.html_path, len);
 	}
-	else
+	else if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.html_path, "%s", stringBuf);
 	}
@@ -341,6 +342,7 @@ int getKeys()
 	HKEY theKey;
 	LPCTSTR strKeyName = L"SOFTWARE\\WinVetSim";
 	int rval = 0;
+	bool ret;
 	long sts = RegOpenKeyEx(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", 0, KEY_READ, &theKey);
 	if ( ERROR_SUCCESS == sts )
 	{
@@ -371,15 +373,78 @@ int getKeys()
 	}
 	else
 	{
-		
 		rval = -1;
 	}
+	char errorstr[256];
 	if (rval >= 0)
 	{
 		// Main key is present. So set SubKeys
 		RegCloseKey(theKey);
 		readSubKeys();
-
+	}
+	// Now proces the ini file
+	char iniFileName[512];
+	errno_t et;
+	sprintf_s(iniFileName, 
+			"%s/%s", 
+			HTML_PATH, 
+			"winvetsim.ini");
+	mINI::INIFile file(iniFileName);
+	mINI::INIStructure ini;
+	ret = file.read(ini);
+	if (ret != true)
+	{
+		et = strerror_s(errorstr, errno);
+		printf("INI Read Fails (%s), Try to create.\n", errorstr);
+		std::ofstream fileWriteStream(iniFileName);
+		if (fileWriteStream.is_open())
+		{
+			fileWriteStream << "; Configuration file for WinVetSim" << std::endl;
+			fileWriteStream << "[Server]" << std::endl;
+			fileWriteStream << "serverAddress = " << PHP_SERVER_ADDR << std::endl;
+			fileWriteStream << "serverPort = " << PHP_SERVER_PORT << std::endl;
+			fileWriteStream << "" << std::endl;
+			fileWriteStream << "[Listeners]" << std::endl;
+			fileWriteStream << "pulsePort = " << PORT_PULSE << std::endl;
+			fileWriteStream << "statusPort = " << PORT_STATUS << std::endl;
+			ret = file.read(ini);
+			if (ret != true)
+			{
+				et = strerror_s(errorstr, errno);
+				printf("INI Read fails after create (%s)\n", errorstr);
+			}
+		}
+		else
+		{
+			et = strerror_s(errorstr, errno);
+			printf("INI is_open() fails ()%s)\n", errorstr);
+		}
+		
+	}
+	if (ret == true)
+	{
+		outputData(ini);
+		if (ini["Server"]["serverPort"].length() > 0)
+		{
+			localConfig.php_server_port = atoi((const char*)ini["Server"]["serverPort"].c_str());
+		}
+		if (ini["Server"]["serverAddress"].length() > 0)
+		{
+			sprintf_s(localConfig.php_server_addr, "%s", ini["Server"]["serverAddress"].c_str());
+		}
+		if (ini["Listeners"]["pulsePort"].length() > 0)
+		{
+			localConfig.port_pulse = atoi((const char*)ini["Listeners"]["pulsePort"].c_str());
+		}
+		if (ini["Listeners"]["statusPort"].length() > 0)
+		{
+			localConfig.port_status = atoi((const char*)ini["Listeners"]["statusPort"].c_str());
+		}
+		printf("Data from INI: Server %s:%d, Pulse %d, Status %d\n",
+			localConfig.php_server_addr, 
+			localConfig.php_server_port, 
+			localConfig.port_pulse, 
+			localConfig.port_status);
 	}
 	return (rval);
 }

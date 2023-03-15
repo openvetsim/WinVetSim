@@ -765,7 +765,7 @@ pulseBroadcastLoop(void)
 			if (count)
 			{
 #ifdef DEBUG
-				printf("Pulse sent to %d listeners\n", count);
+				//printf("Pulse sent to %d listeners\n", count);
 #endif
 			}
 		}
@@ -776,7 +776,7 @@ pulseBroadcastLoop(void)
 			if (count)
 			{
 #ifdef DEBUG
-				printf("PulseVPC sent to %d listeners\n", count);
+				//printf("PulseVPC sent to %d listeners\n", count);
 #endif
 			}
 		}
@@ -797,7 +797,7 @@ pulseBroadcastLoop(void)
 #ifdef DEBUG
 			if (count)
 			{
-				printf("Breath sent to %d listeners\n", count);
+				//printf("Breath sent to %d listeners\n", count);
 			}
 #endif
 		}

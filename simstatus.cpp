@@ -296,8 +296,17 @@ simstatusMain(void)
 		{
 			// SHutdown the PHP Server
 			stopPHPServer();
+#ifdef DEBUG
+			printf("Close Window to Exit\n");
+			while (1)
+			{
+				Sleep(10);
+			}
+#else
 			// Close the application
 			ExitProcess(0);
+#endif
+			
 		}
 	}
 	exit(203);
