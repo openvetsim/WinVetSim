@@ -21,27 +21,27 @@
 */
 
 
-#include <WinSDKVer.h>
+//#include <WinSDKVer.h>
 #define _WIN32_WINNT _WIN32_WINNT_MAXVER
-#include "version.h"
-
+//#include "version.h"
 int checkProcessRunning(void);
 
 #ifdef NDEBUG
 // Windows Header Files
-#include <stdlib.h>
-#include <string.h>
-#include <tchar.h>
+//#include <stdlib.h>
+//#include <string.h>
+//#include <tchar.h>
 #include <strsafe.h>
 #include <afxwin.h>
-#include <tlhelp32.h>
+//#include <tlhelp32.h>
 
 // C RunTime Header Files
-#include <malloc.h>
-#include <memory.h>
+//#include <malloc.h>
+//#include <memory.h>
 #include <shellapi.h>
 
-#include "vetsimTasks.h"
+
+#include "vetsim.h"
 
 #ifdef _UNICODE
 typedef wchar_t TCHAR;
@@ -89,6 +89,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
 	}
+	initializeConfiguration();
+
 	ghInstance = hInstance;
 
 	WNDCLASSEX wcex;
@@ -180,10 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	HDC hdc;
 	TCHAR greeting[] = _T("Open VetSim Simulator System");
 	TCHAR leaving[] = _T("Closing WinVetSim Server");
-	TCHAR version[128] = { 0, };
-	
-
-	swprintf_s(version, L"Version %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+	TCHAR buffer[128] = { 0, };
 
 	switch (message)
 	{
@@ -254,15 +253,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 		// Print greeting in the top left corner.
 		TextOut(hdc,
-			5, 
-			5,
+			10, 
+			10,
 			greeting, 
 			(int)_tcslen(greeting));
+		swprintf_s(buffer, L"Version %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 		TextOut(hdc,
-			5, 
-			20,
-			version, 
-			(int)_tcslen(version));
+			10, 
+			30,
+			buffer, 
+			(int)_tcslen(buffer));
+		if (PHP_SERVER_PORT == 80)
+		{
+			swprintf_s(buffer, L"Control URL: http://%hs/sim-ii/ii.php\n", PHP_SERVER_ADDR);
+		}
+		else
+		{
+			swprintf_s(buffer, L"Control URL: http://%hs:%d/sim-ii/ii.php\n", PHP_SERVER_ADDR, PHP_SERVER_PORT);
+		}
+		TextOut(hdc,
+			10,
+			50,
+			buffer,
+			(int)_tcslen(buffer));
 		// End application-specific layout section.
 
 		EndPaint(hWnd, &ps);
@@ -375,7 +388,7 @@ int main(int argc, char *argv[] )
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
 	}
-
+	initializeConfiguration();
 	if (argc > 1)
 	{
 		for (i = 1; i < argc; i++)
@@ -439,4 +452,19 @@ int checkProcessRunning(void)
 	}
 	CloseHandle(snapshot);
 	return count;
+}
+
+void
+initializeConfiguration(void)
+{
+	// Set configurable parameters to defaults
+	localConfig.port_pulse = DEFAULT_PORT_PULSE;
+	localConfig.port_status = DEFAULT_PORT_STATUS;
+	localConfig.php_server_port = DEFAULT_PHP_SERVER_PORT;
+	sprintf_s(localConfig.php_server_addr, "%s", DEFAULT_PHP_SERVER_ADDRESS);
+	sprintf_s(localConfig.log_name, "%s", DEFAULT_LOG_NAME);
+	sprintf_s(localConfig.html_path, "%s", DEFAULT_HTML_PATH);
+
+	// Allow parameters to be overridedn from registry
+	getKeys();
 }

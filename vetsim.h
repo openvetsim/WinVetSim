@@ -493,6 +493,8 @@ void forceInstructorLock(void);
 void awrr_restart(void);
 ULONGLONG msec_time_update(void);
 std::string GetLastErrorAsString(void);
+void initializeConfiguration(void);
+int getKeys(void);
 
 // Shared Parse functions
 int cardiac_parse(const char* elem, const char* value, struct cardiac* card);

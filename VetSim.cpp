@@ -100,7 +100,6 @@ void SignalHandler(int signal)
 	stopPHPServer();
 }
 
-int getKeys(void);
 HANDLE hComm = NULL;
 int pulseState = 0;
 int pulseStateCount = 0;;
@@ -205,17 +204,6 @@ int vetsim()
 	}
 	EscapeCommFunction(hComm, SETRTS);
 #endif	
-	// Set configurable parameters to defaults
-	localConfig.port_pulse = DEFAULT_PORT_PULSE;
-	localConfig.port_status = DEFAULT_PORT_STATUS;
-	localConfig.php_server_port = DEFAULT_PHP_SERVER_PORT;
-	sprintf_s(localConfig.php_server_addr, "%s", DEFAULT_PHP_SERVER_ADDRESS );
-	sprintf_s(localConfig.log_name, "%s", DEFAULT_LOG_NAME );
-	sprintf_s(localConfig.html_path, "%s", DEFAULT_HTML_PATH );
-
-	// Allow parameters to be overridedn from registry
-	getKeys();
-
 	initSHM(1, 0);
 
 	simmgrInitialize();
