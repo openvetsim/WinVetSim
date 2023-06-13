@@ -26,8 +26,10 @@
 
 #include "llist.h"
 
+#define SCENARIO_LOOP_DELAY	250	// Sleep time (msec) for the Scenario loop
 #define LONG_STRING_SIZE	128
 #define NORMAL_STRING_SIZE	32
+#define SCENE_TITLE_MAX		32
 
 #define PARSE_STATE_NONE	0
 #define PARSE_STATE_INIT	1

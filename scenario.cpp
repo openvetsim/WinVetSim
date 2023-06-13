@@ -372,7 +372,7 @@ scenario_main(void)
 		clock_gettime(CLOCK_REALTIME, &loopStart);
 
 		// Sleep
-		Sleep(250);	// Roughly a quarter second. usleep is not very accurate.
+		Sleep(SCENARIO_LOOP_DELAY);
 
 		if (strcmp(simmgr_shm->status.scenario.state, "Terminate") == 0)	// Check for termination
 		{
@@ -918,6 +918,9 @@ startScene(int sceneId)
 	current_scene = new_scene;
 	simmgr_shm->status.scenario.elapsed_msec_scene = 0;
 	cprCumulative = 0;
+	cprActive = 0;
+	simmgr_shm->status.cpr.duration = 0;
+
 	sprintf_s(simmgr_shm->status.scenario.scene_name, LONG_STRING_SIZE, "%s", current_scene->name);
 
 	simmgr_shm->status.scenario.scene_id = sceneId;
@@ -1085,6 +1088,11 @@ saveData(const char* xmlName, const char* xmlValue)
 				}
 				else if (strcmp(xmlLevels[2].name, "title") == 0)
 				{
+					// Truncate the scene Title to prevent overflow on II screen
+					if (strlen(value) > SCENE_TITLE_MAX)
+					{
+						value[SCENE_TITLE_MAX] = 0;
+					}
 					sprintf_s(new_scene->name, LONG_STRING_SIZE, "%s", value);
 					if (verbose)
 					{
@@ -1276,6 +1284,7 @@ saveData(const char* xmlName, const char* xmlValue)
 				snprintf(scenario->title, LONG_STRING_SIZE, "%s", value);
 			}
 		}
+		[[fallthrough]];
 	default:
 		if (strcmp(xmlLevels[1].name, "header") == 0)
 		{
@@ -1599,25 +1608,6 @@ startParseState(int lvl, char* name)
 
 	default:
 		break;
-	}
-	if (verbose)
-	{
-		printf("New State %s: ", parse_states[parse_state]);
-		if (parse_state == PARSE_STATE_INIT)
-		{
-			printf(" %s", parse_init_states[parse_init_state]);
-		}
-		else if (parse_state == PARSE_STATE_SCENE)
-		{
-			printf(" %s", parse_scene_states[parse_scene_state]);
-		}
-		/*
-		else if ( parse_state == PARSE_STATE_HEADER )
-		{
-			printf(" %s", parse_header_states[parse_header_state] );
-		}
-		*/
-		printf("\n");
 	}
 }
 static void
