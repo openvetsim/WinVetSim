@@ -297,7 +297,7 @@ simmgrInitialize(void)
 	sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", "default");
 	sprintf_s(simmgr_shm->status.scenario.state, STR_SIZE, "%s", "Stopped");
 	simmgr_shm->status.scenario.record = 0;
-	sprintf_s(simmgr_shm->status.scenario.error_message, STR_SIZE, "%s", "Stopped");
+	sprintf_s(simmgr_shm->status.scenario.error_message, STR_SIZE, "%s", "");
 	simmgr_shm->status.scenario.error_flag = 0;
 
 	// instructor/sema

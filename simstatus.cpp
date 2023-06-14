@@ -1023,7 +1023,13 @@ sendStatus(void)
 	htmlReply += ",\n";
 	_itoa_s(simmgr_shm->status.scenario.record, buffer, 256, 10);
 	makejson("record", buffer);
-	htmlReply += ",\n";
+	htmlReply += ",\n"; 
+	if (strlen(simmgr_shm->status.scenario.error_message) > 0)
+	{
+		makejson("error_message", simmgr_shm->status.scenario.error_message);
+		htmlReply += ",\n";
+		simmgr_shm->status.scenario.error_message[0] = 0;
+	}
 	makejson("state", simmgr_shm->status.scenario.state);
 	htmlReply += "\n},\n";
 	htmlReply += " \"logfile\" : {\n";
