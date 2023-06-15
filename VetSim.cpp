@@ -816,6 +816,14 @@ shock_check(void)
 		{
 			simmgr_shm->status.defibrillation.shock = 0;
 		}
+		// Check for a shock time that seems out of order
+		if (shockStartTime > now)
+		{
+			snprintf(msg_buf, sizeof(msg_buf), "shockStartTime (%llu) is greater than now (%llu)", shockStartTime, now );
+			lockAndComment(msg_buf);
+			simmgr_shm->status.defibrillation.shock = 0;
+			shockStartTime = 0;
+		}
 	}
 }
 /*
@@ -1012,7 +1020,7 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 #ifdef DEBUG
 		if (simmgr_shm->status.cardiac.avg_rate < 7)
 		{
-			sprintf_s(msg_buf, BUF_SIZE, "HRCHECK: avg_rate %f Intervals %d NewBeat %d, hrLogNext %lld, diff %f ",
+			sprintf_s(msg_buf, BUF_SIZE, "HRCHECK: avg_rate %f Intervals %d NewBeat %d, hrLogNext %d, diff %llu ",
 				avg_rate, intervals, newBeat, hrLogNext, diff);
 			log_message("", msg_buf);
 		}

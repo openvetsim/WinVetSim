@@ -310,6 +310,7 @@ scenario_main(void)
 	simmgr_shm->status.cpr.compression = 0;
 	simmgr_shm->status.cpr.duration = 0;
 	simmgr_shm->status.defibrillation.energy = 100;
+	simmgr_shm->status.defibrillation.shock = 0;
 	simmgr_shm->status.cardiac.bp_cuff = 0;
 	simmgr_shm->status.cardiac.ecg_indicator = 0;
 	simmgr_shm->status.cardiac.pea = 0;
@@ -319,7 +320,6 @@ scenario_main(void)
 	simmgr_shm->status.respiration.chest_movement = 0;
 	simmgr_shm->status.respiration.manual_breath = 0;
 	simmgr_shm->status.respiration.manual_count = 0;
-
 	simmgr_shm->status.general.temperature_enable = 0;
 
 
