@@ -419,11 +419,8 @@ scenario_main(void)
 		}
 		else if (strcmp(simmgr_shm->status.scenario.state, "Running") == 0)
 		{
-			// Do periodic scenario check, if not in an error state
-			if (errno == 0)
-			{
-				scene_check();
-			}
+			// Do periodic scenario check
+			scene_check();
 			proc_scenario_state = ScenarioState::ScenarioRunning;
 		}
 		else if (strcmp(simmgr_shm->status.scenario.state, "Paused") == 0)

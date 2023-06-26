@@ -2121,7 +2121,8 @@ start_scenario(void)
 	{
 		fileCountBefore = getVideoFileCount();
 		printf("File Count Before is %d\n", fileCountBefore);
-		sprintf_s(simmgr_shm->status.scenario.error_message, "Starting Video Recording: %s", "");
+		snprintf(msg_buf, sizeof(msg_buf), "Starting Video Recording: %s", "");
+		lockAndComment(msg_buf);
 		sts = recordStartStop(1);
 		if (sts != 0)
 		{
