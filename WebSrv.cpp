@@ -180,6 +180,7 @@ int startPHPServer(void )
 {
 	char commandLine[2048];
 	int rval = -1;
+	int checkCount;
 
 	if (isServerRunning() == 0)
 	{
@@ -196,10 +197,14 @@ int startPHPServer(void )
 				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
 			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
 		system(commandLine);
-		Sleep(1000);
-		if (isServerRunning() != 0 )
+		for ( checkCount = 100 ; checkCount > 0; checkCount-- )
 		{
-			rval = 0;
+			Sleep(10);
+			if (isServerRunning() != 0)
+			{
+				rval = 0;
+				break;
+			}
 		}
 	}
 	else

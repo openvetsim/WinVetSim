@@ -95,6 +95,7 @@ struct scenario_scene
 	int timeout_scene;
 
 	struct snode trigger_list;
+	int triggers_needed;
 };
 
 
@@ -122,6 +123,7 @@ struct scenario_trigger
 	int		value;		// Comparison value
 	int		value2;		// Comparison value (only for Inside/Outside)
 	int 	scene;		// ID of next scene
+	int		group;		// Set to include in group
 };
 
 struct scenario_event

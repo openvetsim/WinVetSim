@@ -135,7 +135,7 @@ const char* parse_init_states[] =
 const char* parse_scene_states[] =
 {
 	"NONE", "INIT", "CARDIAC", "RESPIRATION",
-	"GENERAL", "VOCALS", "TIMEOUT", "TRIGS", "TRIG", "TELESIM", "CPR"
+	"GENERAL", "VOCALS", "TIMEOUT", "TRIGS", "TRIGS_REQ", "TRIG", "TELESIM", "CPR"
 };
 
 const char* parse_header_states[] =
@@ -303,7 +303,7 @@ scenario_main(void)
 
 	if (verbose)
 	{
-		printf("Calling processInit for scenario\n");
+		printf("\n\n\nCalling processInit for scenario\n");
 	}
 	///snprintf(s_msg, MAX_MSG_SIZE, "scenario: Calling processInit for scenario" );
 	//log_message("", s_msg );
@@ -844,6 +844,7 @@ scene_check(void)
 	struct snode* snode;
 	int val;
 	int met = 0;
+	int group_met = 0;
 	int msec_diff;
 	int sec_diff;
 
@@ -917,52 +918,109 @@ scene_check(void)
 		case TRIGGER_TEST_EQ:
 			if (val == trig->value)
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_LTE:
 			if (val <= trig->value)
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_LT:
 			if (val < trig->value)
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_GTE:
 			if (val >= trig->value)
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_GT:
 			if (val > trig->value)
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_INSIDE:
 			if ((val > trig->value) && (val < trig->value2))
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		case TRIGGER_TEST_OUTSIDE:
 			if ((val < trig->value) || (val > trig->value2))
 			{
-				met = 1;
+				if (trig->group)
+				{
+					group_met += 1;
+				}
+				else
+				{
+					met = 1;
+				}
 			}
 			break;
 		}
-
-		if (met)
+		if ( ( trig->group == 0 ) && met)
 		{
 			logTrigger(trig, 0);
 			startScene(trig->scene);
 			return;
+		}
+		if ( ( trig->group != 0 ) && ( group_met > 0  ) )
+		{
+			if (group_met >= current_scene->triggers_needed)
+			{
+				logTrigger(trig, 0);
+				startScene(trig->scene);
+				return;
+			}
 		}
 
 		snode = get_next_llist(snode);
@@ -1177,6 +1235,11 @@ saveData(const char* xmlName, const char* xmlValue)
 						printf("Set Scene ID to %d\n", new_scene->id);
 					}
 				}
+				else if (strcmp(xmlLevels[2].name, "triggers_needed") == 0)
+				{
+					new_scene->triggers_needed = atoi(value);
+					printf("Set Triggers Needed to %d\n", new_scene->triggers_needed);
+				}
 				else if (strcmp(xmlLevels[2].name, "title") == 0)
 				{
 					// Truncate the scene Title to prevent overflow on II screen
@@ -1281,6 +1344,10 @@ saveData(const char* xmlName, const char* xmlValue)
 				{
 					sprintf_s(new_trigger->param_element, 32, "%s", value);
 					new_trigger->test = TRIGGER_TEST_EVENT;
+				}
+				else if (strcmp(xmlLevels[4].name, "group") == 0)
+				{
+					new_trigger->group = atoi(value);
 				}
 				else
 				{
@@ -1462,11 +1529,11 @@ startParseState(int lvl, char* name)
 	{
 		if (name)
 		{
-			printf("startParseState: Cur State %s: Lvl %d Name %s   ", parse_states[parse_state], lvl, name);
+			printf("startParseState: Cur State %s: Lvl %d Name %s\t", parse_states[parse_state], lvl, name);
 		}
 		else
 		{
-			printf("startParseState: Cur State %s: Lvl %d Name NULL   ", parse_states[parse_state], lvl );
+			printf("startParseState: Cur State %s: Lvl %d Name NULL\t", parse_states[parse_state], lvl );
 		}
 		if (parse_state == PARSE_STATE_INIT)
 		{
@@ -1474,8 +1541,9 @@ startParseState(int lvl, char* name)
 		}
 		else if (parse_state == PARSE_STATE_SCENE)
 		{
-			printf(" %s", parse_scene_states[parse_scene_state]);
+			printf(" (%s)", parse_scene_states[parse_scene_state]);
 		}
+		printf("\n");
 	}
 	switch (lvl)
 	{
@@ -1567,15 +1635,20 @@ startParseState(int lvl, char* name)
 			break;
 
 		case PARSE_STATE_SCENE:
-			if (strcmp(name, "init") == 0)
+			if (strncmp(name, "init", 4 ) == 0)
 			{
 				parse_scene_state = PARSE_SCENE_STATE_INIT;
 			}
-			else if (strcmp(name, "timeout") == 0)
+			else if (strncmp(name, "timeout", 7) == 0)
 			{
 				parse_scene_state = PARSE_SCENE_STATE_TIMEOUT;
 			}
-			else if (strcmp(name, "triggers") == 0)
+			else if (strcmp(name, "triggers_needed") == 0)
+			{
+				parse_scene_state = PARSE_SCENE_STATE_NONE;
+				printf("Name %s - \n", name);
+			}
+			else if (strncmp(name, "triggers", 8) == 0)
 			{
 				parse_scene_state = PARSE_SCENE_STATE_TRIGS;
 			}
@@ -1653,7 +1726,7 @@ startParseState(int lvl, char* name)
 					parse_scene_state = PARSE_SCENE_STATE_TRIG;
 					if (verbose)
 					{
-						printf("***** New Trigger started ******\n");
+						printf("\n***** New Trigger started ******\n");
 					}
 				}
 				else
@@ -1679,7 +1752,7 @@ startParseState(int lvl, char* name)
 
 					if (verbose)
 					{
-						printf("***** New Event started ******\n");
+						printf("\n***** New Event started ******\n");
 					}
 				}
 				else
@@ -1706,14 +1779,14 @@ endParseState(int lvl)
 {
 	if (verbose)
 	{
-		printf("endParseState: Lvl %d    State: %s", lvl, parse_states[parse_state]);
+		printf("endParseState: Lvl %d    State: %s\n", lvl, parse_states[parse_state]);
 		if (parse_state == PARSE_STATE_INIT)
 		{
-			printf(" %s\n", parse_init_states[parse_init_state]);
+			printf("\t%s\n", parse_init_states[parse_init_state]);
 		}
 		else if (parse_state == PARSE_STATE_SCENE)
 		{
-			printf(" %s\n", parse_scene_states[parse_scene_state]);
+			printf("\t%s\n", parse_scene_states[parse_scene_state]);
 		}
 		else
 		{
