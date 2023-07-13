@@ -766,5 +766,16 @@ getValueFromName(char* param_class, char* param_element)
 		if (strcmp(param_element, "duration") == 0)
 			rval = simmgr_shm->status.cpr.duration;
 	}
+	else if (strcmp(param_class, "pulse") == 0)
+	{
+		if (strcmp(param_element, "left_femoral") == 0)
+			rval = simmgr_shm->status.pulse.left_femoral;
+		if (strcmp(param_element, "right_femoral") == 0)
+			rval = simmgr_shm->status.pulse.right_femoral;
+		if (strcmp(param_element, "duration") == 0)
+			rval = simmgr_shm->status.pulse.duration;
+		if (strcmp(param_element, "active") == 0)
+			rval = simmgr_shm->status.pulse.active;
+	}
 	return (rval);
 }

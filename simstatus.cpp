@@ -1295,6 +1295,12 @@ sendStatus(void)
 	htmlReply += ",\n";
 	_itoa_s(simmgr_shm->status.pulse.left_femoral, buffer, 256, 10);
 	makejson("left_femoral", buffer);
+	htmlReply += ",\n";
+	_itoa_s(simmgr_shm->status.pulse.duration, buffer, 256, 10);
+	makejson("duration", buffer);
+	htmlReply += ",\n";
+	_itoa_s(simmgr_shm->status.pulse.active, buffer, 256, 10);
+	makejson("active", buffer);
 	htmlReply += "\n},\n";
 
 	htmlReply += " \"media\" : {\n";

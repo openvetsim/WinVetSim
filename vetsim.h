@@ -249,6 +249,8 @@ struct pulse
 	int left_dorsal;	// Touch Pressure
 	int right_femoral;	// Touch Pressure
 	int left_femoral;	// Touch Pressure
+	int duration;		// Duration in milliseconds of the active pulse.
+	int active;			// Any palpation is is active
 };
 
 struct cpr
@@ -256,8 +258,8 @@ struct cpr
 	ULONGLONG last;			// msec time of last compression
 	int	compression;	// 0 to 100%
 	int release;		// 0 to 100%
-	int duration;
-	int running;
+	int duration;		// Duration in milliseconds
+	int running;		// 1 when running
 };
 struct defibrillation
 {
