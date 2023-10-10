@@ -257,7 +257,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			10,
 			greeting, 
 			(int)_tcslen(greeting));
-		swprintf_s(buffer, L"Version %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+		swprintf_s(buffer, L"SimMgr Build %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 		TextOut(hdc,
 			10, 
 			30,
@@ -354,7 +354,7 @@ void ErrorExit(LPCTSTR lpszFunction)
 					}
 					c++;
 				}
-				printf("%S: Version %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+				printf("%S: SimMgr %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 				exit(0);
 			}
 			else
@@ -408,7 +408,7 @@ int main(int argc, char *argv[] )
 					}
 					c++;
 				}
-				printf("%s: Version %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+				printf("%s: SimMgr %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
 				exit(0);
 			}
 			else

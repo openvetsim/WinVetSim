@@ -113,7 +113,6 @@ struct timeval loopStop;
 // palpateStart and palpateStop are used to measure the duration of palpation,
 struct timeval palpateStart;
 struct timeval palpateNow;
-int palpateActive = 0;
 
 int eventLast;	// Index of last processed event_callback
 
@@ -210,7 +209,9 @@ scenario_main(void)
 	pulseStatus.right_femoral = false;
 	pulseStatus.left_dorsal = false;
 	pulseStatus.right_dorsal = false;
-	
+	pulseStatus.active = false;
+	pulseStatus.duration = 0;
+
 	simmgr_shm->status.scenario.elapsed_msec_scenario = 0;
 	simmgr_shm->status.scenario.elapsed_msec_scene = 0;
 
@@ -777,17 +778,6 @@ logTrigger(struct scenario_trigger* trig, int time)
 	lockAndComment(s_msg);
 }
 
-void
-pulseActiveTime(void)
-{
-	int msec_diff;
-	int sec_diff;
-	clock_gettime(CLOCK_REALTIME, &palpateNow);
-	sec_diff = (palpateNow.tv_sec - palpateStart.tv_sec);
-	msec_diff = (((sec_diff * 1000000) + palpateNow.tv_usec) - palpateStart.tv_usec) / 1000;
-	simmgr_shm->status.pulse.duration = msec_diff;
-}
-
 /**
 * pulse_check
 *
@@ -800,7 +790,7 @@ static void pulse_check(void)
 	if (!pulseStatus.right_dorsal && simmgr_shm->status.pulse.right_dorsal)
 	{
 		pulseStatus.right_dorsal = true;
-		palpateActive = 1;
+		pulseStatus.active = 1;
 		clock_gettime(CLOCK_REALTIME, &palpateStart);
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: Start Pulse Palpation Right Dorsal ");
 		lockAndComment(s_msg);
@@ -808,7 +798,7 @@ static void pulse_check(void)
 	else if (pulseStatus.right_dorsal && !simmgr_shm->status.pulse.right_dorsal)
 	{
 		pulseStatus.right_dorsal = false;
-		palpateActive = 0;
+		pulseStatus.active = 0;
 		simmgr_shm->status.pulse.duration = 0;
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: End Pulse Palpation Right Dorsal ");
 		lockAndComment(s_msg);
@@ -817,7 +807,7 @@ static void pulse_check(void)
 	if (!pulseStatus.left_dorsal && simmgr_shm->status.pulse.left_dorsal)
 	{
 		pulseStatus.left_dorsal = true;
-		palpateActive = 1;
+		pulseStatus.active = 1;
 		clock_gettime(CLOCK_REALTIME, &palpateStart);
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: Start Pulse Palpation Left Dorsal ");
 		lockAndComment(s_msg);
@@ -825,7 +815,7 @@ static void pulse_check(void)
 	else if (pulseStatus.left_dorsal && !simmgr_shm->status.pulse.left_dorsal)
 	{
 		pulseStatus.left_dorsal = false;
-		palpateActive = 0; 
+		pulseStatus.active = 0;
 		simmgr_shm->status.pulse.duration = 0;
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: End Pulse Palpation Left Dorsal ");
 		lockAndComment(s_msg);
@@ -834,7 +824,7 @@ static void pulse_check(void)
 	if (!pulseStatus.right_femoral && simmgr_shm->status.pulse.right_femoral)
 	{
 		pulseStatus.right_femoral = true;
-		palpateActive = 1;
+		pulseStatus.active = 1;
 		clock_gettime(CLOCK_REALTIME, &palpateStart);
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: Start Pulse Palpation Right Femoral ");
 		lockAndComment(s_msg);
@@ -842,7 +832,7 @@ static void pulse_check(void)
 	else if (pulseStatus.right_femoral && !simmgr_shm->status.pulse.right_femoral)
 	{
 		pulseStatus.right_femoral = false;
-		palpateActive = 0;
+		pulseStatus.active = 0;
 		simmgr_shm->status.pulse.duration = 0;
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: End Pulse Palpation Right Femoral ");
 		lockAndComment(s_msg);
@@ -851,7 +841,7 @@ static void pulse_check(void)
 	if (!pulseStatus.left_femoral && simmgr_shm->status.pulse.left_femoral)
 	{
 		pulseStatus.left_femoral = true;
-		palpateActive = 1;
+		pulseStatus.active = 1;
 		clock_gettime(CLOCK_REALTIME, &palpateStart);
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: Start Pulse Palpation Left Femoral ");
 		lockAndComment(s_msg);
@@ -859,14 +849,21 @@ static void pulse_check(void)
 	else if (pulseStatus.left_femoral && !simmgr_shm->status.pulse.left_femoral)
 	{
 		pulseStatus.left_femoral = false;
-		palpateActive = 0;
+		pulseStatus.active = 0;
 		simmgr_shm->status.pulse.duration = 0;
 		snprintf(s_msg, MAX_MSG_SIZE, "Action: End Pulse Palpation Left Femoral ");
 		lockAndComment(s_msg);
 	}
-	if (palpateActive)
+	simmgr_shm->status.pulse.active = pulseStatus.active;
+	if (pulseStatus.active)
 	{
-		pulseActiveTime();
+		int msec_diff;
+		int sec_diff;
+		clock_gettime(CLOCK_REALTIME, &palpateNow);
+		sec_diff = (palpateNow.tv_sec - palpateStart.tv_sec);
+		msec_diff = (((sec_diff * 1000000) + palpateNow.tv_usec) - palpateStart.tv_usec) / 1000;
+
+		simmgr_shm->status.pulse.duration = msec_diff;
 	}
 }
 /**
