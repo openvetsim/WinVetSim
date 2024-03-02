@@ -207,11 +207,13 @@ int vetsim()
 	initSHM(1, 0);
 
 	simmgrInitialize();
+	log_message_init();
+
 	(void)start_task("pluseTask", pulseTask);
 	(void)start_task("simstatusMain", simstatusMain);
 
 	printf("Hostname: %s\n", simmgr_shm->server.name);
-	sprintf_s(msg_buf, BUF_SIZE, "%s", "Done");
+	sprintf_s(msg_buf, BUF_SIZE, "simmgrInitialization %s", "Done");
 	log_message("", msg_buf);
 
 	if (startPHPServer())
@@ -220,6 +222,12 @@ int vetsim()
 		sprintf_s(msg_buf, BUF_SIZE, "%s", "Could not start PHP Server");
 		log_message("", msg_buf);
 		exit(202);
+	}
+	else
+	{
+		printf("PHP Server OK!\n");
+		sprintf_s(msg_buf, BUF_SIZE, "%s", "PHP Server OK!!");
+		log_message("", msg_buf);
 	}
 	// Open web page
 	sprintf_s(cmd, BUF_SIZE, "start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );

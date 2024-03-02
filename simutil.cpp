@@ -69,13 +69,43 @@ getTimeStr(char* timeStr)
 	strftime(timeStr, 26, "%Y-%m-%d %H:%M:%S", &tm_info);
 	return(timeStr);
 }
+
+/*
+ * Function: log_message_init
+ *
+ * Create sema for limiting access to the common log file.
+ * Write a startup message into the file.
+ *
+ * Parameters: none
+ *
+ * Returns: none
+ */
+
+#include <filesystem>
+namespace fs = std::filesystem;
+
+HANDLE log_sema;
+void
+log_message_init(void)
+{
+	fs::current_path(localConfig.html_path);
+	//TCHAR pwd[MAX_PATH];
+	//GetCurrentDirectory(MAX_PATH, pwd);
+	//MessageBoxW(NULL, pwd, pwd, 0);
+
+	log_sema = CreateMutex(
+		NULL,              // default security attributes
+		FALSE,             // initially not owned
+		NULL);             // unnamed mutex
+
+	log_message("", "Log Started");
+}
 /*
  * Function: log_message
  *
- * Log a message to syslog. The message is also logged to a named file. The file is opened
+ * Log a message to the common log file or to a named file. The file is opened
  * for Append and closed on completion of the write. (The file write will be disabled after
  * development is completed).
- *
  *
  * Parameters: filename - filename to open for writing, NULL for default log file
  *             message - Pointer to message string, NULL terminated
@@ -92,53 +122,68 @@ void log_message(const char* filename, const char* message)
 	wchar_t wcstring[512];
 	size_t origionalSize = strlen(message) + 1;
 	size_t maxSize = 512;
+	int sts;
 
-	if (strlen(filename) > 0 )
+	sts = WaitForSingleObject(log_sema, 1000 );
+	if (sts == WAIT_OBJECT_0)
 	{
-		err = fopen_s(&logfile, filename, "a");
-	}
-	else
-	{
-		err = fopen_s(&logfile, LOG_NAME, "a");
-	}
-	if (logfile)
-	{
-		(void)getTimeStr(timeBuf);
-		fprintf(logfile, "%s: %s\n", timeBuf, message);
-		fclose(logfile);
-	}
+		if (strlen(filename) > 0)
+		{
+			err = fopen_s(&logfile, filename, "a");
+		}
+		else
+		{
+			err = fopen_s(&logfile, LOG_NAME, "a");
+		}
+		if (err)
+		{
+			wchar_t tbuf[1024];
+			char pstr[1024];
+			string errstr = GetLastErrorAsString();
+			sprintf_s(pstr, sizeof(pstr), "fopen_s %s returns %d: %s\n", LOG_NAME, err, errstr.c_str());
+			mbstowcs_s(&convertedChars,
+				tbuf,
+				1024,
+				(const char *)pstr,
+				1024 );
+			MessageBoxW(NULL, tbuf, tbuf, MB_OK);
+		}
+		if (logfile)
+		{
+			(void)getTimeStr(timeBuf);
+			fprintf(logfile, "%s: %s\n", timeBuf, message);
+			fclose(logfile);
+		}
 
-	//lpMessage = message;
-	err = mbstowcs_s(&convertedChars,
-						wcstring, 
-						origionalSize, 
-						message,
-						maxSize );
+		//lpMessage = message;
+		//err = mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
 
-	//printf("%s\n", message);
-	//OutputDebugStringA(lpMessage);
-	//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
+		//printf("%s\n", message);
+		//OutputDebugStringA(lpMessage);
+		//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
 #ifdef NDEBUG
-	HFONT hFont, hOldFont;
-	extern HWND mainWindow;
-	HDC hdc;
-	PAINTSTRUCT ps;
-	hdc = BeginPaint(mainWindow, &ps);
+		HFONT hFont, hOldFont;
+		extern HWND mainWindow;
+		HDC hdc;
+		PAINTSTRUCT ps;
+		hdc = BeginPaint(mainWindow, &ps);
 
-	// Retrieve a handle to the variable stock font.  
-	hFont = (HFONT)GetStockObject(ANSI_VAR_FONT);
+		// Retrieve a handle to the variable stock font.  
+		hFont = (HFONT)GetStockObject(ANSI_VAR_FONT);
 
-	// Select the variable stock font into the specified device context. 
-	if (hOldFont = (HFONT)SelectObject(hdc, hFont))
-	{
-		// Display the text string.  
-		TextOut(hdc, 5, 40, wcstring, (int)convertedChars);
+		// Select the variable stock font into the specified device context. 
+		if (hOldFont = (HFONT)SelectObject(hdc, hFont))
+		{
+			// Display the text string.  
+			TextOut(hdc, 5, 40, wcstring, (int)convertedChars);
 
-		// Restore the original font.        
-		SelectObject(hdc, hOldFont);
-	}
-	EndPaint(mainWindow, &ps);
+			// Restore the original font.        
+			SelectObject(hdc, hOldFont);
+		}
+		EndPaint(mainWindow, &ps);
 #endif
+		ReleaseMutex(log_sema);
+	}
 }
 
 //void log_messaget(const char* filename, TCHAR* message)
@@ -412,8 +457,13 @@ addComment(char* str)
 
 	commentNext = simmgr_shm->commentListNext;
 
+	// Truncate overly large comments
+	if (strlen(str) >= COMMENT_SIZE)
+	{
+		str[COMMENT_SIZE - 1] = 0;
+	}
 	// Event: add to Comment list at end and increment commentListNext
-	sprintf_s(simmgr_shm->commentList[commentNext].comment, STR_SIZE, "%s", str);
+	sprintf_s(simmgr_shm->commentList[commentNext].comment, COMMENT_SIZE, "%s", str);
 
 	commentNext += 1;
 	if (commentNext >= COMMENT_LIST_SIZE)

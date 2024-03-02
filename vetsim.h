@@ -454,6 +454,7 @@ struct trend
 // Prototypes
 // 
 int	initSHM(int create, char* sesid);
+void log_message_init(void);
 void log_message(const char* filename, const char* message);
 //void log_messaget(const char* filename, TCHAR* message);
 char* do_command_read(const char* cmd_str, char* buffer, int max_len);
