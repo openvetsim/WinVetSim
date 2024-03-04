@@ -92,7 +92,12 @@ log_message_init(void)
 	//TCHAR pwd[MAX_PATH];
 	//GetCurrentDirectory(MAX_PATH, pwd);
 	//MessageBoxW(NULL, pwd, pwd, 0);
-
+	DWORD ftyp = GetFileAttributesA("simlogs");
+	if (ftyp == INVALID_FILE_ATTRIBUTES)
+	{
+		// simlogs file does not exist. Create it.
+		CreateDirectoryA("simlogs", NULL);
+	}
 	log_sema = CreateMutex(
 		NULL,              // default security attributes
 		FALSE,             // initially not owned
