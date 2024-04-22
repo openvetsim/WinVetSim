@@ -181,11 +181,13 @@ int startPHPServer(void )
 	char commandLine[2048];
 	int rval = -1;
 	int checkCount;
-
+	char mbuf[300];
 	if (isServerRunning() == 0)
 	{
 		if (findPhpPath() == 0)
 		{
+			sprintf_s(mbuf, 300, "%s", "findPhpPath() Fails");
+			log_message("", mbuf);
 			printf("Cannot find PHP\n");
 			return ( rval );
 		}
@@ -196,6 +198,8 @@ int startPHPServer(void )
 		sprintf_s(commandLine, 2048, 
 				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
 			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
+		sprintf_s(mbuf, 300, "starting PHP: %s", commandLine);
+		log_message("", mbuf);
 		system(commandLine);
 		for ( checkCount = 100 ; checkCount > 0; checkCount-- )
 		{
@@ -209,6 +213,8 @@ int startPHPServer(void )
 	}
 	else
 	{
+		sprintf_s(mbuf, 90, "%s", "isServerRunning() says PHP is Already Running");
+		log_message("", mbuf); 
 		rval = 0;
 	}
 	return (rval);

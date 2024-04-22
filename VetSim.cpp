@@ -138,6 +138,8 @@ setPulseState(int val)
 		//WriteFile(hComm, "\n", 1, &byteswritten, NULL);
 	}
 }
+extern char phpPath[];
+
 int vetsim()
 {
 	int last = -1;
@@ -225,7 +227,7 @@ int vetsim()
 	}
 	else
 	{
-		printf("PHP Server OK!\n");
+		printf("PHP Server OK! %s\n", phpPath);
 		sprintf_s(msg_buf, BUF_SIZE, "%s", "PHP Server OK!!");
 		log_message("", msg_buf);
 	}

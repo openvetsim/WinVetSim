@@ -84,19 +84,23 @@ getTimeStr(char* timeStr)
 #include <filesystem>
 namespace fs = std::filesystem;
 
+char log_dir[512] = { 0, };
+char default_log_file[512] = { 0, };
+
+
 HANDLE log_sema;
 void
 log_message_init(void)
 {
-	fs::current_path(localConfig.html_path);
-	//TCHAR pwd[MAX_PATH];
-	//GetCurrentDirectory(MAX_PATH, pwd);
-	//MessageBoxW(NULL, pwd, pwd, 0);
-	DWORD ftyp = GetFileAttributesA("simlogs");
+	sprintf_s(log_dir, 512, "%s/simlogs", localConfig.html_path );
+	printf("log_dir is %s\n", log_dir);
+	sprintf_s(default_log_file, 512, "%s/simlogs/vetsim.log", localConfig.html_path);
+
+	DWORD ftyp = GetFileAttributesA(log_dir);
 	if (ftyp == INVALID_FILE_ATTRIBUTES)
 	{
 		// simlogs file does not exist. Create it.
-		CreateDirectoryA("simlogs", NULL);
+		CreateDirectoryA(log_dir, NULL);
 	}
 	log_sema = CreateMutex(
 		NULL,              // default security attributes
@@ -104,6 +108,10 @@ log_message_init(void)
 		NULL);             // unnamed mutex
 
 	log_message("", "Log Started");
+
+	// Restore current directory
+
+	//fs::current_path(pwd);
 }
 /*
  * Function: log_message
@@ -117,6 +125,7 @@ log_message_init(void)
  *
  * Returns: none
  */
+
 void log_message(const char* filename, const char* message)
 {
 	FILE* logfile;
@@ -128,7 +137,7 @@ void log_message(const char* filename, const char* message)
 	size_t origionalSize = strlen(message) + 1;
 	size_t maxSize = 512;
 	int sts;
-
+	
 	sts = WaitForSingleObject(log_sema, 1000 );
 	if (sts == WAIT_OBJECT_0)
 	{
@@ -138,14 +147,15 @@ void log_message(const char* filename, const char* message)
 		}
 		else
 		{
-			err = fopen_s(&logfile, LOG_NAME, "a");
+			err = fopen_s(&logfile, default_log_file, "a");
 		}
+
 		if (err)
 		{
 			wchar_t tbuf[1024];
 			char pstr[1024];
 			string errstr = GetLastErrorAsString();
-			sprintf_s(pstr, sizeof(pstr), "fopen_s %s returns %d: %s\n", LOG_NAME, err, errstr.c_str());
+			sprintf_s(pstr, sizeof(pstr), "fopen_s %s returns %d: %s\n", default_log_file, err, errstr.c_str());
 			mbstowcs_s(&convertedChars,
 				tbuf,
 				1024,
