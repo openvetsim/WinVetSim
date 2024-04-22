@@ -290,6 +290,8 @@ void outputData(mINI::INIStructure const& ini)
 	}
 }
 
+HKEY whichKey = HKEY_CURRENT_USER;
+
 void
 readSubKeys(void)
 {
@@ -298,77 +300,100 @@ readSubKeys(void)
 	char stringBuf[FILENAME_SIZE];
 	int len;
 
-	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"PulsePortNum", &data);
+	Ret = readDwordValueRegistry(whichKey, L"SOFTWARE\\WinVetSim", L"PulsePortNum", &data);
 	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.port_pulse = data;
 	}
 
-	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"StatusPortNum", &data);
+	Ret = readDwordValueRegistry(whichKey, L"SOFTWARE\\WinVetSim", L"StatusPortNum", &data);
 	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.port_status = data;
 	}
 
-	Ret = readDwordValueRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", L"ServerPortNum", &data);
+	Ret = readDwordValueRegistry(whichKey, L"SOFTWARE\\WinVetSim", L"ServerPortNum", &data);
 	if (Ret == ERROR_SUCCESS)
 	{
 		localConfig.php_server_port = data;
 	}
-	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "ServerAddress", stringBuf, STR_SIZE);
+	Ret = readStringFromRegistry(whichKey, L"SOFTWARE\\WinVetSim", "ServerAddress", stringBuf, STR_SIZE);
 	if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.php_server_addr, "%s", stringBuf);
 	}
-	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "LogName", stringBuf, STR_SIZE);
+	Ret = readStringFromRegistry(whichKey, L"SOFTWARE\\WinVetSim", "LogName", stringBuf, STR_SIZE);
 	if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.log_name, "%s", stringBuf);
 	}
 
-	Ret = readStringFromRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "HTML_Path", stringBuf, STR_SIZE);
+	Ret = readStringFromRegistry(whichKey, L"SOFTWARE\\WinVetSim", "HTML_Path", stringBuf, STR_SIZE);
 	if (Ret == ERROR_FILE_NOT_FOUND)
 	{
 		len = (int)strlen(localConfig.html_path);
-		Ret = writeStringInRegistry(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", "HTML_Path", localConfig.html_path, len);
+		Ret = writeStringInRegistry(whichKey, L"SOFTWARE\\WinVetSim", "HTML_Path", localConfig.html_path, len);
 	}
 	else if (Ret == ERROR_SUCCESS)
 	{
 		sprintf_s(localConfig.html_path, "%s", stringBuf);
 	}
 }
+
+
+
 int getKeys()
 {
 	HKEY theKey;
 	LPCTSTR strKeyName = L"SOFTWARE\\WinVetSim";
 	int rval = 0;
 	bool ret;
+
+	// Check first for Private Key
 	long sts = RegOpenKeyEx(HKEY_CURRENT_USER, L"SOFTWARE\\WinVetSim", 0, KEY_READ, &theKey);
 	if ( ERROR_SUCCESS == sts )
 	{
+		// Found
 		rval = 1;
+		whichKey = HKEY_CURRENT_USER;
+
 	}
 	else if (ERROR_NO_MATCH == sts || ERROR_FILE_NOT_FOUND == sts)
 	{
-		cout << "Creating registry key " << "SOFTWARE\\WinVetSim" << endl;
-		PHKEY hKey = &theKey;
-
-		long j = RegCreateKeyEx(HKEY_CURRENT_USER,		//HKEY
-								L"SOFTWARE\\WinVetSim",				// lpSubKey
-								0L,						// Reserved
-								NULL,					// lpClass
-								REG_OPTION_NON_VOLATILE, // dwOptions
-								KEY_ALL_ACCESS,			//samDesired
-								NULL,					// lpSecurityAttributes
-								hKey,				// phkResult
-								NULL);				// lpdwDisposition	
-
-		if (ERROR_SUCCESS != j)
-			cout << "Error: Could not create registry key " << "SOFTWARE\\WinVetSim" << endl << "\tERROR: " << j << GetLastErrorAsString() << endl;
-		else
+		// See if a Public Key exists
+		long sts = RegOpenKeyEx(HKEY_LOCAL_MACHINE, L"SOFTWARE\\WinVetSim", 0, KEY_READ, &theKey);
+		if (ERROR_SUCCESS == sts)
 		{
-			cout << "Success: Key created" << endl;
+			// Found
 			rval = 1;
+			whichKey = HKEY_LOCAL_MACHINE;
+		}
+		else if (ERROR_NO_MATCH == sts || ERROR_FILE_NOT_FOUND == sts)
+		{
+			// No Public or Private Key found, so create a Private key
+			cout << "Creating registry key " << "SOFTWARE\\WinVetSim" << endl;
+			PHKEY hKey = &theKey;
+
+			long j = RegCreateKeyEx(HKEY_CURRENT_USER,		//HKEY
+				L"SOFTWARE\\WinVetSim",				// lpSubKey
+				0L,						// Reserved
+				NULL,					// lpClass
+				REG_OPTION_NON_VOLATILE, // dwOptions
+				KEY_ALL_ACCESS,			//samDesired
+				NULL,					// lpSecurityAttributes
+				hKey,				// phkResult
+				NULL);				// lpdwDisposition	
+
+			if (ERROR_SUCCESS != j)
+			{
+				cout << "Error: Could not create registry key " << "SOFTWARE\\WinVetSim" << endl << "\tERROR: " << j << GetLastErrorAsString() << endl;
+			}
+			else
+			{
+				cout << "Success: Key created" << endl;
+				rval = 1;
+				whichKey = HKEY_CURRENT_USER;
+			}
 		}
 	}
 	else
