@@ -26,6 +26,8 @@
 #include <unordered_map>
 #include <utility>
 
+using namespace std;
+
 void sendStatus(void);
 void sendQuickStatus(void);
 void sendSimctrData(void);

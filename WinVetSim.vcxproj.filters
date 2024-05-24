@@ -60,6 +60,9 @@
     <ClCompile Include="soundInit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="bcastServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vetsim.h">
@@ -87,6 +90,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ini.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="vetsimDefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

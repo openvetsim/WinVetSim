@@ -38,6 +38,8 @@
 
 #include "vetsim.h"
 
+using namespace std;
+
 extern struct simmgr_shm shmSpace;
 
 /*
@@ -885,3 +887,5 @@ pulseProcessChild(void)
 	printf("pulseProcessChild Exit");
 	exit(204);
 }
+
+

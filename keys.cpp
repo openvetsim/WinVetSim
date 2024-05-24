@@ -37,6 +37,8 @@
 #include <stdio.h>
 #include "ini.h"
 
+using namespace std;
+
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 

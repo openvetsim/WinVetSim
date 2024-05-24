@@ -75,8 +75,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
-	UNREFERENCED_PARAMETER(hPrevInstance);
+	//UNREFERENCED_PARAMETER(hPrevInstance);
 	int sts;
+	MSG msg;
+	BOOL bRet;
+	WNDCLASS wc;
 
 	sts = checkProcessRunning();
 	if (sts == 0)
@@ -88,6 +91,23 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	{
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
+	}
+
+	if (!hPrevInstance)
+	{
+		wc.style = 0;
+		wc.lpfnWndProc = (WNDPROC)WndProc;
+		wc.cbClsExtra = 0;
+		wc.cbWndExtra = 0;
+		wc.hInstance = hInstance;
+		wc.hIcon = LoadIcon((HINSTANCE)NULL, IDI_APPLICATION);
+		wc.hCursor = LoadCursor((HINSTANCE)NULL, IDC_ARROW);
+		wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1); ; // GetStockObject(WHITE_BRUSH);
+		wc.lpszMenuName = L"MainMenu";
+		wc.lpszClassName = L"MainWndClass";
+
+		if (!RegisterClass(&wc))
+			return FALSE;
 	}
 	initializeConfiguration();
 
@@ -143,10 +163,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return 1;
 	}
 	// The parameters to ShowWindow explained:
-	// hWnd: the value returned from CreateWindow
-	// nCmdShow: the fourth parameter from WinMain
-	ShowWindow(hWnd,
-		nCmdShow);
+	//    hWnd: the value returned from CreateWindow
+	//    nCmdShow: the fourth parameter from WinMain
+	ShowWindow(hWnd, nCmdShow);
 	UpdateWindow(hWnd);
 	mainWindow = hWnd;
 
@@ -158,13 +177,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 	(void)start_task("VetSim", vetsim );
 
-	MSG msg;
-	while (GetMessage(&msg, NULL, 0, 0))
+	while ( (bRet = GetMessage(&msg, NULL, 0, 0)) != 0 )
 	{
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		if (bRet == -1)
+		{
+			// handle the error and possibly exit
+		}
+		else
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
-
 	return (int)msg.wParam;
 }
 
@@ -183,9 +207,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	TCHAR greeting[] = _T("Open VetSim Simulator System");
 	TCHAR leaving[] = _T("Closing WinVetSim Server");
 	TCHAR buffer[128] = { 0, };
+	HWND hwndCombo;
+	int cTxtLen;
+	PSTR pszMem;
 
 	switch (message)
 	{
+	
 	case WM_CREATE:
 		/*hButton = CreateWindowEx(
 			NULL,
@@ -371,6 +399,8 @@ void ErrorExit(LPCTSTR lpszFunction)
 }
 #else
 #include "vetsim.h"
+using namespace std;
+
 int main(int argc, char *argv[] )
 {
 	int i;
@@ -466,5 +496,5 @@ initializeConfiguration(void)
 	sprintf_s(localConfig.html_path, "%s", DEFAULT_HTML_PATH);
 
 	// Allow parameters to be overridedn from registry
-	getKeys();
+	getKeys();  
 }

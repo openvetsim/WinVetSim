@@ -175,6 +175,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="bcastServer.cpp" />
     <ClCompile Include="keys.cpp" />
     <ClCompile Include="llist.cpp" />
     <ClCompile Include="main.cpp" />
@@ -199,6 +200,7 @@
     <ClInclude Include="sendKeys.h" />
     <ClInclude Include="version.h" />
     <ClInclude Include="vetsim.h" />
+    <ClInclude Include="vetsimDefs.h" />
     <ClInclude Include="vetsimTasks.h" />
     <ClInclude Include="XMLRead.h" />
   </ItemGroup>

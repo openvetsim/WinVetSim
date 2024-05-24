@@ -21,6 +21,7 @@
 */
 
 #include "vetsim.h"
+using namespace std;
 
 // FOR WIN32 SIGNAL HANDLING
 // compile with: /EHsc /W4
@@ -213,7 +214,7 @@ int vetsim()
 
 	(void)start_task("pluseTask", pulseTask);
 	(void)start_task("simstatusMain", simstatusMain);
-
+	(void)start_task("bcastReply", bcastReply);
 	printf("Hostname: %s\n", simmgr_shm->server.name);
 	sprintf_s(msg_buf, BUF_SIZE, "simmgrInitialization %s", "Done");
 	log_message("", msg_buf);

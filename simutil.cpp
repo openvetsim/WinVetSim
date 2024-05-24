@@ -23,6 +23,8 @@
 
 #include "vetsim.h"
 
+using namespace std;
+
 #define SIMUTIL	1
 
 extern char msg_buf[];
@@ -133,7 +135,6 @@ void log_message(const char* filename, const char* message)
 	errno_t err;
 	char timeBuf[32];
 	size_t convertedChars = 0;
-	wchar_t wcstring[512];
 	size_t origionalSize = strlen(message) + 1;
 	size_t maxSize = 512;
 	int sts;
@@ -170,17 +171,21 @@ void log_message(const char* filename, const char* message)
 			fclose(logfile);
 		}
 
+		//wchar_t wcstring[512];
 		//lpMessage = message;
 		//err = mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
 
 		//printf("%s\n", message);
 		//OutputDebugStringA(lpMessage);
 		//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
+
 #ifdef NDEBUG
 		HFONT hFont, hOldFont;
 		extern HWND mainWindow;
 		HDC hdc;
 		PAINTSTRUCT ps;
+		wchar_t wcstring[512];
+
 		hdc = BeginPaint(mainWindow, &ps);
 
 		// Retrieve a handle to the variable stock font.  
@@ -189,8 +194,9 @@ void log_message(const char* filename, const char* message)
 		// Select the variable stock font into the specified device context. 
 		if (hOldFont = (HFONT)SelectObject(hdc, hFont))
 		{
-			// Display the text string.  
-			TextOut(hdc, 5, 40, wcstring, (int)convertedChars);
+			// Display the text string.
+			mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
+			TextOutW(hdc, 5, 40, wcstring, (int)convertedChars);
 
 			// Restore the original font.        
 			SelectObject(hdc, hOldFont);

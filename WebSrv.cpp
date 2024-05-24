@@ -25,6 +25,7 @@
 */
 
 #include "vetsim.h"
+using namespace std;
 
 int checkURL(string url, string port, string page);
 

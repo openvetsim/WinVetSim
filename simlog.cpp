@@ -27,6 +27,8 @@
  */
 #include "vetsim.h"
 
+using namespace std;
+
 #define SIMLOG_NAME_LENGTH 128
 #define MAX_TIME_STR	24
 #define MAX_LINE_LEN	512
@@ -53,6 +55,7 @@ int lock_held = 0;
 #include <filesystem>
 
 namespace fs = std::filesystem;
+
 
 int
 simlog_create()
