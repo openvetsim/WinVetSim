@@ -342,7 +342,13 @@ readSubKeys(void)
 	}
 }
 
-
+/*
+Look for SOFTWARE/WinVetSim Key in HKEY_CURRENT_USER.
+If not found, look for in HKEY_LOCAL_MACHINE
+If not found:
+	Create Key HKEY_CURRENT_USER/SOFTWARE/WinVetSim
+	Create Key HKEY_CURRENT_USER/SOFTWARE/WinVetSim\HTML_Path - Value set to 
+*/
 
 int getKeys()
 {
@@ -372,6 +378,20 @@ int getKeys()
 		}
 		else if (ERROR_NO_MATCH == sts || ERROR_FILE_NOT_FOUND == sts)
 		{
+			wchar_t tbuf[1024];
+			char pstr[1024];
+			size_t convertedChars = 0;
+			string errstr = GetLastErrorAsString();
+			sprintf_s(pstr, sizeof(pstr), "WinVetSim key not found in registry!\nTry reinstalling WinVetSim.\n" );
+			mbstowcs_s(&convertedChars,
+				tbuf,
+				1024,
+				(const char*)pstr,
+				1024);
+			MessageBoxW(NULL, tbuf, tbuf, MB_OK);
+			exit ( -1 );
+			/*
+			
 			// No Public or Private Key found, so create a Private key
 			cout << "Creating registry key " << "SOFTWARE\\WinVetSim" << endl;
 			PHKEY hKey = &theKey;
@@ -396,6 +416,7 @@ int getKeys()
 				rval = 1;
 				whichKey = HKEY_CURRENT_USER;
 			}
+			*/
 		}
 	}
 	else
