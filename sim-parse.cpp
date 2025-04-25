@@ -692,6 +692,10 @@ processInit(struct instructor* initParams)
 	Sleep(500);
 
 }
+
+/*
+ * getValueFromName is used by the scenario processor
+ */
 int
 getValueFromName(char* param_class, char* param_element)
 {
@@ -707,6 +711,8 @@ getValueFromName(char* param_class, char* param_element)
 			rval = simmgr_shm->status.cardiac.pea;
 		else if (strcmp(param_element, "rate") == 0)
 			rval = simmgr_shm->status.cardiac.rate;
+		else if (strcmp(param_element, "avg_rate") == 0)
+			rval = simmgr_shm->status.cardiac.avg_rate;
 		else if (strcmp(param_element, "nibp_rate") == 0)
 			rval = simmgr_shm->status.cardiac.nibp_rate;
 		else if (strcmp(param_element, "nibp_read") == 0)
@@ -736,6 +742,8 @@ getValueFromName(char* param_class, char* param_element)
 	{
 		if (strcmp(param_element, "spo2") == 0)
 			rval = simmgr_shm->status.respiration.spo2;
+		else if ( (strcmp(param_element, "awRR") == 0) || (strcmp(param_element, "awrr") == 0) )
+			rval = simmgr_shm->status.respiration.awRR;
 		else if (strcmp(param_element, "rate") == 0)
 			rval = simmgr_shm->status.respiration.rate;
 		else if (strcmp(param_element, "etco2_indicator") == 0)

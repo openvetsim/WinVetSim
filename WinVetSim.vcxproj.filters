@@ -63,6 +63,9 @@
     <ClCompile Include="bcastServer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="scenario_xml.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vetsim.h">

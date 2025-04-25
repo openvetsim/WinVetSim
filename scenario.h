@@ -6,7 +6,8 @@
  *
  * This file is part of the sim-mgr distribution (https://github.com/OpenVetSimDevelopers/sim-mgr).
  *
- * Copyright (c) 2019 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
+ * Copyright (c) 2019-2021 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
+ * Copyright (c) 2019-2025 ITown Design, LLC,  Ithaca, NY
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +27,7 @@
 
 #include "llist.h"
 
-#define SCENARIO_LOOP_DELAY	250	// Sleep time (msec) for the Scenario loop
+#define SCENARIO_LOOP_DELAY	2000	// Sleep time (msec) for the Scenario loop
 #define LONG_STRING_SIZE	128
 #define NORMAL_STRING_SIZE	32
 #define SCENE_TITLE_MAX		32
@@ -56,9 +57,12 @@
 #define PARSE_SCENE_STATE_INIT_MEDIA		6
 #define PARSE_SCENE_STATE_INIT_CPR			7
 #define PARSE_SCENE_STATE_INIT_TELESIM		8
-#define PARSE_SCENE_STATE_TIMEOUT			20
-#define PARSE_SCENE_STATE_TRIGS				21
-#define PARSE_SCENE_STATE_TRIG				22
+#define PARSE_SCENE_STATE_TIMEOUT			9
+#define PARSE_SCENE_STATE_TRIGS				10
+#define PARSE_SCENE_STATE_TRIG				11
+#define PARSE_SCENE_STATE_TRIG_GROUP		12
+#define PARSE_SCENE_STATE_TRIG_GROUP_TRIG	13
+
 
 #define PARSE_HEADER_STATE_NONE				0
 #define PARSE_HEADER_STATE_AUTHOR			1
@@ -81,6 +85,15 @@ struct scenario_data
 	struct snode event_list;
 };
 
+struct trigger_group
+{
+	struct snode group_list;
+	int group_id;
+	int scene;	// ID of next scene
+	struct snode group_trigger_list;
+	int group_triggers_needed;
+	int group_triggers_met;
+};
 struct scenario_scene
 {
 	struct snode scene_list;
@@ -94,8 +107,12 @@ struct scenario_scene
 	int timeout;
 	int timeout_scene;
 
+	// List of simple triggers. Advance to next_scene when met.
 	struct snode trigger_list;
-	int triggers_needed;
+
+	// List of trigger groups. Advcance to next_scene when the required number of triggers have been met.
+	struct snode group_list;
+
 };
 
 
@@ -124,6 +141,7 @@ struct scenario_trigger
 	int		value2;		// Comparison value (only for Inside/Outside)
 	int 	scene;		// ID of next scene
 	int		group;		// Set to include in group
+	int		met;		// Set when an trigger is met. Used to check for Trigger Group Completions.
 };
 
 struct scenario_event
@@ -142,5 +160,8 @@ struct xml_level
 	int num;
 	char name[PARAMETER_NAME_LENGTH];
 };
+
+int readScenario(const char* name);
+struct scenario_scene* showScenes(void);
 
 #endif // _SCENARIO_H

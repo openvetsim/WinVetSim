@@ -45,7 +45,7 @@
 #include <csignal>
 #include <debugapi.h>
 #include <WinUser.h>
-#include <tchar.h>
+#include <stringapiset.h>
 
 #include <chrono>
 #include <thread>
@@ -54,11 +54,22 @@
 #include <vector>
 #include <locale>
 #include <sstream>
+#include <codecvt>
 
 #include <sal.h>
 #include "vetsimTasks.h"
 #include "version.h"
 
+/*
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <io.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <share.h>
+*/
 // Defines
 //
 #include "vetsimDefs.h"
@@ -380,11 +391,12 @@ struct simmgr_shm
 	// Log file status
 	struct logfile logfile;
 
-	int eventListBuffer;
-
 	// Event List - Used to post multiple messages to the various listeners
 	// Must only be written when instructor.sema is held
-	int eventListNext;	// Index to the last event written ( 0 to EVENT_LIST_SIZE-1 )
+	int eventListNextWrite;	// Index to the last event written ( 0 to EVENT_LIST_SIZE-1 )
+	int eventListNextRead;	// Index to the last event read ( 0 to EVENT_LIST_SIZE-1 )
+	int lastEventLogged;	// Index to the last event logged ( 0 to EVENT_LIST_SIZE-1 )
+	int lastCommentLogged;	// Index to the last comment logged ( 0 to COMMENT_LIST_SIZE-1 )
 	struct event_inj	eventList[EVENT_LIST_SIZE];
 
 	// Comment List - Used to post comments into the log
@@ -423,6 +435,7 @@ char* do_command_read(const char* cmd_str, char* buffer, int max_len);
 void get_date(char* buffer, int maxLen);
 char* getETH0_IP();
 char* getWIFI_IP();
+/*
 #ifndef WIN32
 char* nth_occurrence(char* haystack, char* needle, int nth);
 void daemonize(void);
@@ -432,8 +445,9 @@ char* _itoa(int val, char* buf, int radix);
 char* _ltoa(long int val, char* buf, int radix);
 void signal_fault_handler(int sig);
 #else
+*/
 void showLastError(LPTSTR lpszFunction);
-#endif
+//#endif
 void cleanString(char* strIn);
 
 // Defines and protos for sim-log
@@ -460,6 +474,7 @@ ULONGLONG msec_time_update(void);
 std::string GetLastErrorAsString(void);
 void initializeConfiguration(void);
 int getKeys(void);
+__int64 getDcode(void);
 
 // Shared Parse functions
 int cardiac_parse(const char* elem, const char* value, struct cardiac* card);
@@ -529,3 +544,5 @@ void strToLower(char* buf);
 int recordStartStop(int record);
 int getVideoFileCount(void);
 void closeVideoCapture(void);
+
+typedef unsigned char byte;

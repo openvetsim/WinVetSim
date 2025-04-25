@@ -4,7 +4,8 @@
  * This file is part of the sim-mgr distribution (https://github.com/OpenVetSimDevelopers/sim-mgr).
  *
  * Copyright (c) 2020-2023 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
- *
+ * Copyright (c) 2020-2025 ITown Design, Ithaca, NY
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.

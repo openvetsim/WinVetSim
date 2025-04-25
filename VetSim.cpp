@@ -6,7 +6,8 @@
  * This file is part of the sim-mgr distribution.
  *
  * Copyright (c) 2019-2021 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
- *
+ * Copyright (c) 2019-2025 ITown Design, Ithaca, NY
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
@@ -29,8 +30,6 @@ using namespace std;
 
 #include <signal.h>
 
-int lastEventLogged = 0;
-int lastCommentLogged = 0;
 char buf[1024];
 
 int scenarioPid = -1;
@@ -292,7 +291,8 @@ simmgrInitialize(void)
 	memset(simmgr_shm, 0, sizeof(struct simmgr_shm));
 
 	// hdr
-	sprintf_s(simmgr_shm->hdr.version, STR_SIZE, "%d.%d", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN );
+	sprintf_s(simmgr_shm->hdr.version, STR_SIZE, "%d.%d.%lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
+
 	simmgr_shm->hdr.size = sizeof(struct simmgr_shm);
 
 
@@ -338,12 +338,13 @@ simmgrInitialize(void)
 	simmgr_shm->logfile.lines_written = 0;
 
 	// Event List
-	simmgr_shm->eventListNext = 0;
-	lastEventLogged = 0;
+	simmgr_shm->eventListNextWrite = 0;
+	simmgr_shm->eventListNextRead = 0;
+	simmgr_shm->lastEventLogged = 0;
 
 	// Comment List
 	simmgr_shm->commentListNext = 0;
-	lastCommentLogged = 0;
+	simmgr_shm->lastCommentLogged = 0;
 
 	// instructor/cpr
 	simmgr_shm->instructor.cpr.compression = -1;
@@ -2220,37 +2221,39 @@ start_scenario(void)
 void
 checkEvents(void)
 {
-	if ((lastEventLogged != simmgr_shm->eventListNext) ||
-		(lastCommentLogged != simmgr_shm->commentListNext))
+	if ((simmgr_shm->lastEventLogged != simmgr_shm->eventListNextWrite) ||
+		(simmgr_shm->lastCommentLogged != simmgr_shm->commentListNext))
 	{
 		takeInstructorLock();
-		while (lastEventLogged != simmgr_shm->eventListNext)
+		while (simmgr_shm->lastEventLogged != simmgr_shm->eventListNextWrite)
 		{
-			sprintf_s(msg_buf, BUF_SIZE, "Event: %s", simmgr_shm->eventList[lastEventLogged].eventName);
+			sprintf_s(msg_buf, BUF_SIZE, "Event: %d (%d) %s", simmgr_shm->lastEventLogged, 
+							simmgr_shm->eventListNextWrite,
+							simmgr_shm->eventList[simmgr_shm->lastEventLogged].eventName);
 
 			simlog_entry(msg_buf);
-			lastEventLogged++;
-			if (lastEventLogged >= EVENT_LIST_SIZE)
+			simmgr_shm->lastEventLogged++;
+			if (simmgr_shm->lastEventLogged >= EVENT_LIST_SIZE)
 			{
-				lastEventLogged = 0;
+				simmgr_shm->lastEventLogged = 0;
 			}
 		}
-		while (lastCommentLogged != simmgr_shm->commentListNext)
+		while (simmgr_shm->lastCommentLogged != simmgr_shm->commentListNext)
 		{
-			if (strlen(simmgr_shm->commentList[lastCommentLogged].comment) == 0)
+			if (strlen(simmgr_shm->commentList[simmgr_shm->lastCommentLogged].comment) == 0)
 			{
 				sprintf_s(msg_buf, BUF_SIZE,"Null Comment: lastCommentLogged is %d simmgr_shm->commentListNext is %d State is %d\n",
-					lastCommentLogged, simmgr_shm->commentListNext, scenario_state);
+					simmgr_shm->lastCommentLogged, simmgr_shm->commentListNext, scenario_state);
 				log_message("Error", msg_buf);
 			}
 			else
 			{
-				simlog_entry(simmgr_shm->commentList[lastCommentLogged].comment);
+				simlog_entry(simmgr_shm->commentList[simmgr_shm->lastCommentLogged].comment);
 			}
-			lastCommentLogged++;
-			if (lastCommentLogged >= COMMENT_LIST_SIZE)
+			simmgr_shm->lastCommentLogged++;
+			if (simmgr_shm->lastCommentLogged >= COMMENT_LIST_SIZE)
 			{
-				lastCommentLogged = 0;
+				simmgr_shm->lastCommentLogged = 0;
 			}
 		}
 		releaseInstructorLock();

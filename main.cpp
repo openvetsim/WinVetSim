@@ -21,10 +21,12 @@
 */
 
 
+
 //#include <WinSDKVer.h>
 #define _WIN32_WINNT _WIN32_WINNT_MAXVER
 //#include "version.h"
 int checkProcessRunning(void);
+#define OTHER_SCREEN	1
 
 #ifdef NDEBUG
 // Windows Header Files
@@ -207,9 +209,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	TCHAR greeting[] = _T("Open VetSim Simulator System");
 	TCHAR leaving[] = _T("Closing WinVetSim Server");
 	TCHAR buffer[128] = { 0, };
-	HWND hwndCombo;
-	int cTxtLen;
-	PSTR pszMem;
 
 	switch (message)
 	{
@@ -285,7 +284,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			10,
 			greeting, 
 			(int)_tcslen(greeting));
-		swprintf_s(buffer, L"SimMgr Build %d.%d.%d\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+		swprintf_s(buffer, L"SimMgr Build %d.%d.%lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
 		TextOut(hdc,
 			10, 
 			30,
@@ -382,7 +381,7 @@ void ErrorExit(LPCTSTR lpszFunction)
 					}
 					c++;
 				}
-				printf("%S: SimMgr %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+				printf("%S: SimMgr %d.%d.%lld\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
 				exit(0);
 			}
 			else
@@ -438,7 +437,8 @@ int main(int argc, char *argv[] )
 					}
 					c++;
 				}
-				printf("%s: SimMgr %d.%d.%d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, SIMMGR_VERSION_BUILD);
+				
+				printf("%s: SimMgr %lld.%d %d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
 				exit(0);
 			}
 			else
@@ -448,6 +448,7 @@ int main(int argc, char *argv[] )
 			}
 		}
 	}
+	printf("SimMgr %d.%d %lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
 	vetsim();
 	
 	return 0;
@@ -493,8 +494,25 @@ initializeConfiguration(void)
 	localConfig.php_server_port = DEFAULT_PHP_SERVER_PORT;
 	sprintf_s(localConfig.php_server_addr, "%s", DEFAULT_PHP_SERVER_ADDRESS);
 	sprintf_s(localConfig.log_name, "%s", DEFAULT_LOG_NAME);
-	sprintf_s(localConfig.html_path, "%s", DEFAULT_HTML_PATH);
 
+	//char publicPath[64];
+	const char htmlPath[32] = DEFAULT_HTML_PATH;
+	// char* pathp = &publicPath;
+	char* pValue;
+	size_t pathl;
+
+	errno_t et;
+	char errorstr[256];
+
+	errno_t err = _dupenv_s(&pValue, &pathl, "PUBLIC");
+	if (err)
+	{
+		et = strerror_s(errorstr, errno);
+		printf("_dupenv_s: %s\n", errorstr );
+	}
+	sprintf_s(localConfig.html_path, "%s\\%s", pValue, htmlPath);
+
+	printf("Default html path is %s\n", localConfig.html_path);
 	// Allow parameters to be overridedn from registry
 	getKeys();  
 }

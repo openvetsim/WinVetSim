@@ -96,7 +96,7 @@ struct listener
 	SOCKET cfd;
 	char ipAddr[32];
 };
-#define MAX_LISTENERS 20
+#define MAX_LISTENERS 10
 
 struct listener listeners[MAX_LISTENERS];
 
@@ -540,6 +540,34 @@ pulseTask(void )
 				client_addr.sa_data[4] & 0xff,
 				client_addr.sa_data[5] & 0xff
 			);
+#if 0
+			// Change to restrict to one controller only
+			if (listeners[0].allocated == 1 )
+			{
+				printf("Closing Controller Socket\n");
+				closesocket(listeners[i].cfd);
+			}
+			listeners[0].allocated = 1;
+			listeners[0].cfd = cfd;
+			listeners[0].thread_no = i;
+			simmgr_shm->simControllers[0].allocated = 1;
+			sprintf_s(simmgr_shm->simControllers[0].ipAddr, STR_SIZE, "%d.%d.%d.%d",
+				client_addr.sa_data[2] & 0xff,
+				client_addr.sa_data[3] & 0xff,
+				client_addr.sa_data[4] & 0xff,
+				client_addr.sa_data[5] & 0xff
+			);
+			printf("Connecting Controller %d.%d.%d.%d\n",
+				client_addr.sa_data[2] & 0xff,
+				client_addr.sa_data[3] & 0xff,
+				client_addr.sa_data[4] & 0xff,
+				client_addr.sa_data[5] & 0xff
+			);
+			// Send the Status Port Number to the listener
+			sendStatusPort(i);
+			printf("Send Status Port complete\n");
+			found = 1;
+#else
 			// Check for reopen from an existing controller
 			found = 0;
 			for (i = 0; i < MAX_LISTENERS; i++)
@@ -589,6 +617,7 @@ pulseTask(void )
 				// Unable to allocate
 				closesocket(cfd);
 			}
+#endif
 		}
 	}
 	sprintf_s(p_msg, BUF_SIZE, "simpulse terminates");

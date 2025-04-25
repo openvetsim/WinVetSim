@@ -13,7 +13,7 @@
 #define DEFAULT_PHP_SERVER_PORT		8081
 #define DEFAULT_PHP_SERVER_ADDRESS	"127.0.0.1"
 #define DEFAULT_LOG_NAME			"simlogs/vetsim.log"
-#define DEFAULT_HTML_PATH			"html"
+#define DEFAULT_HTML_PATH			"WinVetSim\\html"
 
 struct localConfiguration
 {

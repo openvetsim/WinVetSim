@@ -446,7 +446,7 @@ addEvent(char* str)
 	int eventNext;
 
 	// Event: add to event list at end and increment eventListNext
-	eventNext = simmgr_shm->eventListNext;
+	eventNext = simmgr_shm->eventListNextWrite;
 
 	sprintf_s(simmgr_shm->eventList[eventNext].eventName, STR_SIZE, "%s", str);
 
@@ -458,7 +458,7 @@ addEvent(char* str)
 	{
 		eventNext = 0;
 	}
-	simmgr_shm->eventListNext = eventNext;
+	simmgr_shm->eventListNextWrite = eventNext;
 	if (strcmp(str, "aed") == 0)
 	{
 		simmgr_shm->instructor.defibrillation.shock = 1;
@@ -550,7 +550,7 @@ void showLastError(LPTSTR lpszFunction)
 		StringCchPrintf((LPTSTR)lpDisplayBuf,
 			LocalSize(lpDisplayBuf) / sizeof(TCHAR),
 			TEXT("%s failed with error %d: %s"),
-			lpszFunction, dw, lpp_msg);
+			lpszFunction, dw, lpp_msg );
 		MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
 		LocalFree(lpDisplayBuf);
 	}
@@ -658,4 +658,42 @@ clock_gettime(int X, struct timeval* tv)
 	tv->tv_sec = (long)(t.QuadPart / 1000000);
 	tv->tv_usec = (long)(t.QuadPart % 1000000);
 	return (0);
+}
+/*
+ * getDcode
+ *
+ * Get the current date code for the simulation
+ * The date code is a 10 digit number in the format YYYYMMDDHH
+ * YYYY = year since 1900
+ * MM = Month (1-12)
+ * DD = Day of Month (1-31)
+ * HH = hour of day (0-23)
+ *
+ * Returns: dcode - the date code
+ */
+__int64
+getDcode(void)
+{
+	struct tm newtime;
+	__time64_t long_time;
+	__int64 dcode;
+	errno_t sts;
+
+	_time64(&long_time);
+	sts = _localtime64_s(&newtime, &long_time);
+	if (sts)
+	{
+		dcode = 0;
+	}
+	else
+	{
+		
+		dcode = (newtime.tm_year+1900) * 1000000;
+		dcode += newtime.tm_mon		   * 10000;
+		dcode += newtime.tm_mday       * 100;
+		dcode += newtime.tm_hour;
+		printf("Dcode Year %d, Month %d, Day %d, Hour %d\n%lld\n",
+			newtime.tm_year + 1900, newtime.tm_mon, newtime.tm_mday, newtime.tm_hour, dcode);
+	}
+	return dcode;
 }

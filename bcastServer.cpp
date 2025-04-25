@@ -74,7 +74,7 @@ int bcastReply(void)
 			inet_ntop(AF_INET, &(Sender_addr.sin_addr), recvbuff, INET_ADDRSTRLEN);
 			std::cout << " From " << recvbuff;
 			sprintf_s(recvbuff, "WVS_FOUND");
-			ret = sendto(sock, recvbuff, strlen(recvbuff), 0, (struct sockaddr*)&Sender_addr, len);
+			ret = sendto(sock, recvbuff, (int)strlen(recvbuff), 0, (struct sockaddr*)&Sender_addr, len);
 		}
 	} while (1);
 

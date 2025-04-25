@@ -72,18 +72,24 @@ findPhpPath(void)
 		FindClose(hFind);
 	}
 	// Shared 64-Bit
-	if ((hFind = FindFirstFile(L"C:/Program Files/PHP/v8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
+	if ((hFind = FindFirstFile(L"C:\\Program Files/WinVetSim/PHP8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
 	{
 		do {
+			//printf("Found %S\n", FindFileData.cFileName);
 			if (wcscmp(FindFileData.cFileName, L"php.exe") == 0)
 			{
-				sprintf_s(phpPath, "%s", "C:/Program Files/PHP/v8.0");
+				sprintf_s(phpPath, "%s", "C:/Program Files/WinVetSim/PHP8.0");
 				FindClose(hFind);
 				return (1);
 			}
 		} while (FindNextFile(hFind, &FindFileData));
 		FindClose(hFind);
 	}
+	else
+	{
+		printf("No files found in %s\n", "C:/Program Files/WinVetSim/PHP/V8.0");
+	}
+
 	// Shared 32-bit
 	if ((hFind = FindFirstFile(L"C:/Program Files (x86)/PHP/v8.0/*.exe", &FindFileData)) != INVALID_HANDLE_VALUE)
 	{
