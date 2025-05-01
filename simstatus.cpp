@@ -999,6 +999,8 @@ sendSimctrData(void)
 
 }
 
+extern char WVSversion[];
+
 void
 sendStatus(void)
 {
@@ -1260,6 +1262,8 @@ sendStatus(void)
 	htmlReply += "\n},\n";
 
 	htmlReply += " \"general\" : {\n";
+	makejson("wvs_version", WVSversion);
+	htmlReply += ",\n";
 	_itoa_s(simmgr_shm->status.general.temperature, buffer, 256, 10);
 	makejson("temperature", buffer);
 	htmlReply += ",\n";

@@ -100,6 +100,8 @@ void SignalHandler(int signal)
 	stopPHPServer();
 }
 
+extern char WVSversion[];
+
 HANDLE hComm = NULL;
 int pulseState = 0;
 int pulseStateCount = 0;;
@@ -138,6 +140,7 @@ setPulseState(int val)
 		//WriteFile(hComm, "\n", 1, &byteswritten, NULL);
 	}
 }
+
 extern char phpPath[];
 
 int vetsim()
@@ -291,8 +294,7 @@ simmgrInitialize(void)
 	memset(simmgr_shm, 0, sizeof(struct simmgr_shm));
 
 	// hdr
-	sprintf_s(simmgr_shm->hdr.version, STR_SIZE, "%d.%d.%lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
-
+	sprintf_s(simmgr_shm->hdr.version, STR_SIZE, "%s", WVSversion );
 	simmgr_shm->hdr.size = sizeof(struct simmgr_shm);
 
 

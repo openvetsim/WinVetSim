@@ -61,6 +61,13 @@ static TCHAR szWindowClass[] = _T("DesktopApp");	// the main window class name
 static TCHAR szTitle[] = _T("WinVetSim");			// The title bar text
 static HINSTANCE ghInstance = NULL;
 
+char WVSversion[STR_SIZE];
+
+void
+setWVSVersion(void)
+{
+	sprintf_s(WVSversion, STR_SIZE, "%d.%d.%lld", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
+}
 // Forward declarations of functions included in this code module:
 //ATOM                MyRegisterClass(HINSTANCE hInstance);
 //BOOL                InitInstance(HINSTANCE, int);
@@ -94,6 +101,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
 	}
+
+	setWVSVersion();
 
 	if (!hPrevInstance)
 	{
@@ -284,7 +293,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			10,
 			greeting, 
 			(int)_tcslen(greeting));
-		swprintf_s(buffer, L"SimMgr Build %d.%d.%lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
+		swprintf_s(buffer, L"SimMgr Version %hs\n", WVSversion );
 		TextOut(hdc,
 			10, 
 			30,
@@ -381,7 +390,9 @@ void ErrorExit(LPCTSTR lpszFunction)
 					}
 					c++;
 				}
-				printf("%S: SimMgr %d.%d.%lld\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
+				// hdr
+
+				printf("%S: SimMgr %s\n", ptr, WVSversion );
 				exit(0);
 			}
 			else
@@ -417,6 +428,8 @@ int main(int argc, char *argv[] )
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
 	}
+	setWVSVersion();
+
 	initializeConfiguration();
 	if (argc > 1)
 	{
@@ -437,8 +450,7 @@ int main(int argc, char *argv[] )
 					}
 					c++;
 				}
-				
-				printf("%s: SimMgr %lld.%d %d\n", ptr, SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode() );
+				printf("%s: SimMgr %s\n", ptr, WVSversion);
 				exit(0);
 			}
 			else
@@ -448,7 +460,7 @@ int main(int argc, char *argv[] )
 			}
 		}
 	}
-	printf("SimMgr %d.%d %lld\n", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
+	printf("SimMgr %s\n", WVSversion);
 	vetsim();
 	
 	return 0;
