@@ -59,6 +59,7 @@
 #include <sal.h>
 #include "vetsimTasks.h"
 #include "version.h"
+#include <cstdint>
 
 /*
 #include <fcntl.h>
@@ -372,6 +373,7 @@ struct simControllers
 {
 	int allocated;
 	char ipAddr[256];
+	char version[32];
 };
 // Data Structure of Shared memory file
 struct simmgr_shm
@@ -427,7 +429,7 @@ struct trend
 
 // Prototypes
 // 
-int	initSHM(int create, char* sesid);
+int	initSHM(void );
 void log_message_init(void);
 void log_message(const char* filename, const char* message);
 //void log_messaget(const char* filename, TCHAR* message);

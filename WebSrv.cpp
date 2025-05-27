@@ -40,7 +40,7 @@ int isServerRunning(void)
 	port  = std::to_string(PHP_SERVER_PORT );
 	page = "sim-ii/hostCheck.php";
 	sts = checkURL(host, port, page);
-	cout << "URL: " << host << ":" << port << "/" << page << " sts: " << sts << endl;
+	//cout << "URL: " << host << ":" << port << "/" << page << " sts: " << sts << endl;
 
 	return (sts);
 }
@@ -189,6 +189,7 @@ int startPHPServer(void )
 	int rval = -1;
 	int checkCount;
 	char mbuf[300];
+
 	if (isServerRunning() == 0)
 	{
 		if (findPhpPath() == 0)
@@ -200,14 +201,14 @@ int startPHPServer(void )
 		}
 		printf("Starting PHP Server %s\n", phpPath );
 
-		
 		// start [<title>] //d <path>] [program [<parameter>...]]
 		sprintf_s(commandLine, 2048, 
-				"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
+			"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
 			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
 		sprintf_s(mbuf, 300, "starting PHP: %s", commandLine);
 		log_message("", mbuf);
 		system(commandLine);
+		
 		for ( checkCount = 100 ; checkCount > 0; checkCount-- )
 		{
 			Sleep(10);

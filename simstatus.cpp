@@ -1407,6 +1407,7 @@ sendStatus(void)
 	htmlReply += "\n},\n";
 
 	htmlReply += "\"controllers\" : {\n";
+
 	int ctrlCount = 0;
 	for (i = 0; i < MAX_CONTROLLERS; i++)
 	{
@@ -1419,6 +1420,28 @@ sendStatus(void)
 			ctrlCount++;
 			_itoa_s(i + 1, buffer, 256, 10);
 			makejson(buffer, simmgr_shm->simControllers[i].ipAddr);
+		}
+	}
+	if (ctrlCount > 0)
+	{
+		htmlReply += "\n";
+	}
+	htmlReply += "},\n";
+
+	htmlReply += "\"controllerVersions\" : {\n";
+	ctrlCount = 0;
+
+	for (i = 0; i < MAX_CONTROLLERS; i++)
+	{
+		if (simmgr_shm->simControllers[i].allocated)
+		{
+			if (ctrlCount > 0)
+			{
+				htmlReply += ",\n";
+			}
+			ctrlCount++;
+			_itoa_s(i + 1, buffer, 256, 10);
+			makejson(buffer, simmgr_shm->simControllers[i].version);
 		}
 	}
 	if (ctrlCount > 0)

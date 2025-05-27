@@ -44,7 +44,7 @@ struct simmgr_shm* simmgr_shm;	// Data structure of the shared memory
  */
 
 int
-initSHM(int create, char* sesid)
+initSHM(void )
 {
 	extern struct simmgr_shm shmSpace;
 	simmgr_shm = &shmSpace;
@@ -115,6 +115,38 @@ log_message_init(void)
 
 	//fs::current_path(pwd);
 }
+#ifdef NDEBUG
+#include <windows.h>
+#include <string>
+
+extern HWND hEdit;
+
+void append_text_to_edit(const wchar_t* newText)
+{
+	if (!hEdit) return;
+
+	// Get current length
+	int len = GetWindowTextLengthW(hEdit);
+
+	// Allocate buffer for current + new text
+	std::wstring buffer;
+	buffer.resize(len);
+
+	if (len > 0)
+		GetWindowTextW(hEdit, &buffer[0], len + 1);
+
+	// Append new text (with newline)
+	buffer.append(newText);
+	buffer.append(L"\r\n");
+
+	// Set updated text
+	SetWindowTextW(hEdit, buffer.c_str());
+
+	// Scroll to bottom
+	SendMessageW(hEdit, EM_SETSEL, buffer.length(), buffer.length());
+	SendMessageW(hEdit, EM_SCROLLCARET, 0, 0);
+}
+#endif
 /*
  * Function: log_message
  *
@@ -127,6 +159,7 @@ log_message_init(void)
  *
  * Returns: none
  */
+
 
 void log_message(const char* filename, const char* message)
 {
@@ -170,21 +203,28 @@ void log_message(const char* filename, const char* message)
 			fprintf(logfile, "%s: %s\n", timeBuf, message);
 			fclose(logfile);
 		}
-
-		//wchar_t wcstring[512];
+		
+		wchar_t wcstring[512+4];
 		//lpMessage = message;
-		//err = mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
-
+		err = mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
+		  
+        errno_t err = wcscat_s(wcstring, 516, L"\n");  
+        if (err != 0) {  
+           // Handle the error appropriately, e.g., log or display an error message  
+           wprintf(L"Error concatenating strings: %d\n", err);  
+        }
 		//printf("%s\n", message);
 		//OutputDebugStringA(lpMessage);
 		//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
-
+		//SetWindowText(hEdit, wcstring);
 #ifdef NDEBUG
+
+		append_text_to_edit(wcstring);
+
 		HFONT hFont, hOldFont;
 		extern HWND mainWindow;
 		HDC hdc;
 		PAINTSTRUCT ps;
-		wchar_t wcstring[512];
 
 		hdc = BeginPaint(mainWindow, &ps);
 
@@ -676,7 +716,8 @@ getDcode(void)
 {
 	struct tm newtime;
 	__time64_t long_time;
-	__int64 dcode;
+    
+    uint64_t dcode; // Replace __uint64 with uint64_t
 	errno_t sts;
 
 	_time64(&long_time);
@@ -687,11 +728,18 @@ getDcode(void)
 	}
 	else
 	{
-		
-		dcode = (newtime.tm_year+1900) * 1000000;
-		dcode += newtime.tm_mon		   * 10000;
-		dcode += newtime.tm_mday       * 100;
-		dcode += newtime.tm_hour;
+		uint64_t year = (newtime.tm_year + 1900);
+		uint64_t month = newtime.tm_mon + 1;
+		uint64_t day = newtime.tm_mday;
+		uint64_t hour = newtime.tm_hour;
+
+		//printf("%Iu %Iu %Iu %Iu", year, month, day, hour);
+
+		dcode =  year * 1000000;
+		dcode += month  * 10000;
+		dcode += day      * 100;
+		dcode += hour;
 	}
 	return dcode;
 }
+

@@ -63,6 +63,8 @@ struct localConfiguration localConfig;
 char msg_buf[BUF_SIZE];
 int vs_iiLockTaken = 0;
 int hrCheckCount = 0;
+bool currentIsPulsed = FALSE;
+bool currentIsRegular = FALSE;
 
 void simmgrInitialize(void);
 void resetAllParameters(void);
@@ -209,7 +211,7 @@ int vetsim()
 	}
 	EscapeCommFunction(hComm, SETRTS);
 #endif	
-	initSHM(1, 0);
+	initSHM();
 
 	simmgrInitialize();
 	log_message_init();
@@ -851,18 +853,27 @@ shock_check(void)
  *
 */
 #define HR_CALC_LIMIT		10		// Max number of recorded beats to count in calculation
-#define HR_LOG_LEN			32
+#define HR_CALC_LIMIT_FAST	40		// Beats to cound with fast heart rate (over 160 BPM)
+#define HR_LOG_LEN			64
 ULONGLONG hrLog[HR_LOG_LEN] = { 0, };
 int hrLogNext = 0;
 ULONGLONG hrLogLastNatural = 0;	// beatCount, last natural
 ULONGLONG hrLogLastVPC = 0;	// VPC count, last VPC
 
-#define HR_LOG_DELAY	(40)
 int hrLogDelay = 0;
 
-#define HR_LOG_CHANGE_LOOPS	50	// hr_check is called every 5 msec. So this will cause a recalc every 250 msec
+#define HR_LOG_CHANGE_LOOPS	10	// hr_check is called every 5 msec. So this will cause a recalc every 50 msec
 int hrLogReportLoops = 0;
 
+void hrLogBeat(void)
+{
+	hrLog[hrLogNext] = msec_time_update();
+	hrLogNext += 1;
+	if (hrLogNext >= HR_LOG_LEN)
+	{
+		hrLogNext = 0;
+	}
+}
 void hrcheck_handler(void )     // current system time  )    // additional information 
 {
 	ULONGLONG now; // Current msec time
@@ -879,9 +890,11 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 	int intervals = -1;
 	// int oldRate;
 	int newRate;
-	//int setRate;
+	int setRate = simmgr_shm->status.cardiac.rate;
 	int newBeat = 0;
 	static int reports = 0;
+	int calcLimit;
+
 	hrCheckCount++;
 
 	now = msec_time_update();
@@ -908,25 +921,6 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 		newBeat = 1;
 	}
 
-	if (newBeat)
-	{
-		prev = hrLogNext;
-		hrLog[hrLogNext] = now;
-		hrLogNext += 1;
-		if (hrLogNext >= HR_LOG_LEN)
-		{
-			hrLogNext = 0;
-		}
-	}
-	else
-	{
-		prev = hrLogNext - 1;
-		if (prev < 0)
-		{
-			prev = (HR_LOG_LEN - 1);
-		}
-	}
-
 	if (hrLogReportLoops++ >= HR_LOG_CHANGE_LOOPS)
 	{
 		avg_rate = -9;
@@ -935,17 +929,18 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 		lastTime = 0;
 		firstTime = 0;
 
-		beats = 1;
+		beats = 0;
 		intervals = 0;
 
-		lastTime = hrLog[prev];
-		if (lastTime < 0)  // Don't look at empty logs
+		prev = hrLogNext - 1;
+		if (prev < 0)
 		{
-			avg_rate = -2;
+			prev = (HR_LOG_LEN - 1);
 		}
-		else if (lastTime == 0)  // Don't look at empty logs
+		lastTime = hrLog[prev];
+		if (lastTime <= 0)  // Don't look at empty logs
 		{
-			avg_rate = -3;
+			avg_rate = 0;
 		}
 		else
 		{
@@ -964,8 +959,15 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 				{
 					prev -= 1;
 				}
-
-				for (i = 0; i < HR_CALC_LIMIT; i++)
+				if ( setRate > 160 )
+				{
+					calcLimit = HR_CALC_LIMIT_FAST;
+				}
+				else
+				{
+					calcLimit = HR_CALC_LIMIT;
+				}
+				for (i = 0; i < calcLimit; i++)
 				{
 					diff = now - hrLog[prev];
 					if (diff > 20000) // Over Limit seconds since this recorded beat
@@ -1020,16 +1022,17 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 		else
 		{
 			newRate = (int)round(avg_rate);
-			/* setRate = simmgr_shm->status.cardiac.rate;
-			if ((newRate <= (setRate + 3)) &&
-				(newRate >= (setRate - 3)))
+			/*
+			if (currentIsRegular)
 			{
-				simmgr_shm->status.cardiac.avg_rate = setRate;
+				if ((newRate <= (setRate + 5)) &&
+					(newRate >= (setRate - 5)))
+				{
+					newRate = setRate;
+				}				
 			}
-			else */
-			{
-				simmgr_shm->status.cardiac.avg_rate = newRate;
-			}
+			*/
+			simmgr_shm->status.cardiac.avg_rate = newRate;
 		}
 #ifdef DEBUG
 		if (simmgr_shm->status.cardiac.avg_rate < 7)
@@ -1041,6 +1044,7 @@ void hrcheck_handler(void )     // current system time  )    // additional infor
 #endif
 	}
 }
+
 /*
  * msec_time_update
 */
@@ -1292,14 +1296,21 @@ bool
 isRhythmPulsed(char* rhythm)
 {
 	if ((strcmp(rhythm, "asystole") == 0) ||
-		(strcmp(rhythm, "vfib") == 0))
+		(strcmp(rhythm, "vfib") == 0) ||
+		(strcmp(rhythm, "afib") == 0))
 	{
+		currentIsRegular = false;
 		return (false);
 	}
 	else
 	{
-		return (true);
+		if ((strcmp(rhythm, "sinus") == 0) && (simmgr_shm->status.cardiac.vpc_type != 0))
+		{
+			currentIsRegular = false;
+		}
 	}
+	currentIsRegular = true;
+	return (true);
 }
 
 
@@ -1345,7 +1356,6 @@ scan_commands(void)
 	int trycount;
 	int oldRate;
 	int newRate;
-	bool currentIsPulsed;
 	bool newIsPulsed;
 	int v;
 	char buf[BUF_SIZE];
@@ -2197,7 +2207,7 @@ start_scenario(void)
 		sprintf_s(simmgr_shm->status.scenario.runtimeScenario, STR_SIZE, "%s", "00:00:00");
 		sprintf_s(simmgr_shm->status.scenario.runtimeScene, STR_SIZE, "%s", "00:00:00");
 		simmgr_shm->status.scenario.error_flag = 0;
-		std::thread::id tid;
+		thread::id tid;
 		tid = start_task("scenario_main", scenario_main);
 
 		//if (!tid)

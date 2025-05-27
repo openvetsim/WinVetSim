@@ -6,7 +6,8 @@
  * This file is part of the sim-mgr distribution.
  *
  * Copyright (c) 2019-2021 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
- *
+ * Copyright (c) 2022-2025 ITown Design, Ithaca, NY
+ * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, version 3.
@@ -27,6 +28,96 @@
 //#include "version.h"
 int checkProcessRunning(void);
 #define OTHER_SCREEN	1
+#define NO_SCREEN	0
+
+
+#include "vetsim.h"
+
+char WVSversion[STR_SIZE];
+
+__int64
+getBuildDate(void)
+{
+	char date[] = __DATE__; // "Mmm dd yyyy"
+	char time[] = __TIME__; // "hh:mm:ss"
+	uint64_t dcode;
+	errno_t sts;
+	uint64_t month;
+	printf("Build Date %s %s  ", date, time);
+
+	uint64_t year = atoi(&date[7]);
+	if (strncmp(&date[0], "Jan", 3) == 0)
+	{
+		month = 1;
+	}
+	else if (strncmp(&date[0], "Feb", 3) == 0)
+	{
+		month = 2;
+	}
+	else if (strncmp(&date[0], "Mar", 3) == 0)
+	{
+		month = 3;
+	}
+	else if (strncmp(&date[0], "Apr", 3) == 0)
+	{
+		month = 4;
+	}
+	else if (strncmp(&date[0], "May", 3) == 0)
+	{
+		month = 5;
+	}
+	else if (strncmp(&date[0], "Jun", 3) == 0)
+	{
+		month = 6;
+	}
+	else if (strncmp(&date[0], "Jul", 3) == 0)
+	{
+		month = 7;
+	}
+	else if (strncmp(&date[0], "Aug", 3) == 0)
+	{
+		month = 8;
+	}
+	else if (strncmp(&date[0], "Sep", 3) == 0)
+	{
+		month = 9;
+	}
+	else if (strncmp(&date[0], "Oct", 3) == 0)
+	{
+		month = 10;
+	}
+	else if (strncmp(&date[0], "Nov", 3) == 0)
+	{
+		month = 11;
+	}
+	else if (strncmp(&date[0], "Dec", 3) == 0)
+	{
+		month = 12;
+	}
+	else
+	{
+		month = 0;
+	}
+	date[6] = 0;
+	uint64_t day = atoi(&date[4]);
+	time[2] = 0;
+	uint64_t hour = atoi(time);
+
+		printf("%Iu %Iu %Iu %Iu\n", year, month, day, hour);
+
+	dcode = year * 1000000;
+	dcode += month * 10000;
+	dcode += day * 100;
+	dcode += hour;
+	
+	return dcode;
+}
+
+void
+setWVSVersion(void)
+{
+	sprintf_s(WVSversion, STR_SIZE, "%d.%d.%lld", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getBuildDate());
+}
 
 #ifdef NDEBUG
 // Windows Header Files
@@ -43,7 +134,6 @@ int checkProcessRunning(void);
 #include <shellapi.h>
 
 
-#include "vetsim.h"
 
 #ifdef _UNICODE
 typedef wchar_t TCHAR;
@@ -61,13 +151,6 @@ static TCHAR szWindowClass[] = _T("DesktopApp");	// the main window class name
 static TCHAR szTitle[] = _T("WinVetSim");			// The title bar text
 static HINSTANCE ghInstance = NULL;
 
-char WVSversion[STR_SIZE];
-
-void
-setWVSVersion(void)
-{
-	sprintf_s(WVSversion, STR_SIZE, "%d.%d.%lld", SIMMGR_VERSION_MAJ, SIMMGR_VERSION_MIN, getDcode());
-}
 // Forward declarations of functions included in this code module:
 //ATOM                MyRegisterClass(HINSTANCE hInstance);
 //BOOL                InitInstance(HINSTANCE, int);
@@ -103,7 +186,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	}
 
 	setWVSVersion();
+	initializeConfiguration();
 
+#if NO_SCREEN != 1
 	if (!hPrevInstance)
 	{
 		wc.style = 0;
@@ -120,8 +205,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		if (!RegisterClass(&wc))
 			return FALSE;
 	}
-	initializeConfiguration();
-
 	ghInstance = hInstance;
 
 	WNDCLASSEX wcex;
@@ -180,6 +263,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	UpdateWindow(hWnd);
 	mainWindow = hWnd;
 
+#endif
+
+
 	//CMenu menu;
 	//ASSERT(menu.LoadMenu(IDR_MENU1));
 	//CMenu* pPopup = menu.GetSubMenu(0);
@@ -223,6 +309,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	
 	case WM_CREATE:
+		/*hEdit = CreateWindowEx(
+			WS_EX_CLIENTEDGE,
+			L"EDIT",
+			NULL,
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+			20, 100,    // x, y position
+			650, 350,  // width, height
+			hWnd,
+			NULL,
+			ghInstance,
+			NULL
+		);*/
 		/*hButton = CreateWindowEx(
 			NULL,
 			L"Button",
@@ -283,6 +381,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			hWnd, NULL,
 			ghInstance,
 			NULL);*/
+
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
@@ -428,8 +527,8 @@ int main(int argc, char *argv[] )
 		MessageBox(0, L"An instance of WinVetSim is already running.", L"Error!", MB_ICONSTOP | MB_OK);
 		exit(-1);
 	}
-	setWVSVersion();
 
+	setWVSVersion();
 	initializeConfiguration();
 	if (argc > 1)
 	{

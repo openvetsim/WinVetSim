@@ -14,3 +14,4 @@ void simstatusMain(void);
 std::thread::id start_task(const char* name, std::function<void(void)> func);
 void timer_start(std::function<void(void)> func, unsigned int interval);
 
+void pulseProcessChild(void);

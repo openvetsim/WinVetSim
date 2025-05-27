@@ -259,7 +259,7 @@ scenario_main(void)
 	time_t start_time;
 	errno_t err = 0;
 
-	snprintf(s_msg, MAX_MSG_SIZE, "Scenario File %s SessionID %s", simmgr_shm->status.scenario.active, sesid);
+	snprintf(s_msg, MAX_MSG_SIZE, "Scenario File \"%s\"", simmgr_shm->status.scenario.active);
 	if (!checkOnly)
 	{
 		log_message("", s_msg);

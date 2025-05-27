@@ -83,10 +83,21 @@ int currentVpcFreq = 0;
 int currentBreathRate = 0;
 unsigned int lastManualBreath = 0;
 
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <iostream>
+#include <string>
+
+#pragma comment(lib, "Ws2_32.lib")
+
+
+void getControllerVersion(char *hostIPAddr, char *dest );
+
 void set_pulse_rate(int bpm);
 void set_breath_rate(int bpm);
 void calculateVPCFreq(void);
 void sendStatusPort(int listener);
+
 /* struct to hold data to be passed to a thread
    this shows how multiple data items can be passed to a thread */
 struct listener
@@ -95,6 +106,7 @@ struct listener
 	int thread_no;
 	SOCKET cfd;
 	char ipAddr[32];
+	char version[32];
 };
 #define MAX_LISTENERS 10
 
@@ -147,6 +159,7 @@ resetVpc(void)
 		From VPC3 to Sinus:		19
 */
 extern void setPulseState(int);
+extern void hrLogBeat(void);
 
 static void
 pulse_beat_handler(void)
@@ -162,6 +175,7 @@ pulse_beat_handler(void)
 				{
 					// VPC Injection
 					simmgr_shm->status.cardiac.pulseCountVpc++;
+					hrLogBeat();
 					vpcState--;
 					switch (vpcState)
 					{
@@ -190,6 +204,7 @@ pulse_beat_handler(void)
 				{
 					// Normal Cycle
 					simmgr_shm->status.cardiac.pulseCount++;
+					hrLogBeat();
 					if (afibActive)
 					{
 						// Next beat phase is between 50% and 200% of standard. 
@@ -222,6 +237,7 @@ pulse_beat_handler(void)
 		else
 		{
 			simmgr_shm->status.cardiac.pulseCount++;
+			hrLogBeat();
 			setPulseState(2);
 		}
 	}
@@ -607,10 +623,18 @@ pulseTask(void )
 						);
 						// Send the Status Port Number to the listener
 						sendStatusPort(i);
+						if (0)
+						{
+							getControllerVersion(simmgr_shm->simControllers[i].ipAddr, &listeners[i].version[0]);
+							strncpy_s(simmgr_shm->simControllers[i].version, sizeof(simmgr_shm->simControllers[i].version),
+								listeners[i].version, sizeof(simmgr_shm->simControllers[i].version) - 1);
+							simmgr_shm->simControllers[i].version[sizeof(simmgr_shm->simControllers[i].version) - 1] = '\0'; // Ensure null-termination
+						}
 						found = 1;
 						break;
 					}
 				}
+               
 			}
 			if (i == MAX_LISTENERS)
 			{
@@ -917,4 +941,102 @@ pulseProcessChild(void)
 	exit(204);
 }
 
+#pragma comment(lib, "Ws2_32.lib")
 
+void getControllerVersion(char* hostIPAddr, char* dest) {
+	WSADATA wsaData;
+	SOCKET sock = INVALID_SOCKET;
+	struct sockaddr_in serverAddr;
+	char buffer[4096] = { 0, };
+	char request[BUF_SIZE] = { 0, };
+
+	int result;
+	int port = 80;
+
+	// Initialize WinSock
+	result = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (result != 0) {
+		std::cerr << "WSAStartup failed: " << result << std::endl;
+		return;
+	}
+	printf("WSAStartup OK\n");
+	// Create a socket
+	sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock == INVALID_SOCKET) {
+		std::cerr << "Socket creation failed: " << WSAGetLastError() << std::endl;
+		WSACleanup();
+		return;
+	}
+	printf("sock OK\n");
+	// Set up the server address structure
+	serverAddr.sin_family = AF_INET;
+	serverAddr.sin_port = htons(port);
+	memcpy(&serverAddr.sin_addr, hostIPAddr, strlen(hostIPAddr));
+
+	// Connect to the server
+	result = connect(sock, (struct sockaddr*)&serverAddr, sizeof(serverAddr));
+	if (result == SOCKET_ERROR) {
+		std::cerr << "Connection failed: " << WSAGetLastError() << std::endl;
+		closesocket(sock);
+		WSACleanup();
+		return;
+	}
+	printf("connect OK\n");
+
+	// Send an HTTP GET request
+	sprintf_s(request, BUF_SIZE, "GET /version HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", hostIPAddr);
+
+	// Send the request
+	result = send(sock, request, (int)strlen(request), 0);
+	if (result == SOCKET_ERROR) {
+		std::cerr << "Send failed: " << WSAGetLastError() << std::endl;
+		closesocket(sock);
+		WSACleanup();
+		return;
+	}
+	printf("Send OK\n");
+	// Receive the response
+	std::cout << "Response from server:" << std::endl;
+	do {
+		result = recv(sock, buffer, sizeof(buffer) - 1, 0);
+		printf("recv returns %d\n", result);
+		if (result > 0) {
+			buffer[result] = '\0'; // Null-terminate the buffer
+			std::cout << buffer;
+		}
+		else if (result == 0) {
+			std::cout << "Connection closed by server." << std::endl;
+		}
+		else {
+			std::cerr << "Receive failed: " << WSAGetLastError() << std::endl;
+		}
+	} while (result > 0);
+
+	printf("Got Response from SimCtl\n");
+
+	// Clean up
+	closesocket(sock);
+	WSACleanup();
+	printf("Data Returned %s\n", buffer);
+	/*
+	// Extract the version number from the response
+	ptr = strstr(buffer, "\"simCtlVersion");
+	if (ptr)
+	{
+		ptr += strlen("\"simCtlVersion\":\"");
+		char* endPtr = strstr(ptr, "\"");
+		if (endPtr) {
+			*endPtr = '\0'; // Null-terminate the version string
+			std::cout << "Controller Version: " << ptr << std::endl;
+			strncpy_s(dest, 32, ptr, _TRUNCATE);
+		}
+		else {
+			*dest = 0;
+		}
+	}
+	else {
+		*dest = 0;
+	}
+	printf("Controller Version: %s\n", dest);
+	*/
+}

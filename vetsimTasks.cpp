@@ -21,6 +21,7 @@
 */
 
 #include "vetsimTasks.h"
+#include <thread>
 
 using namespace std;
 
