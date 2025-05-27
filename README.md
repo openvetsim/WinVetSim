@@ -6,7 +6,7 @@ WinVetSim was developed using Microsoft Visual Studio Community 2022
 
 
 ## Release Notes
-### WinVetSim SIMMGR Version 2.2 4/25/2025
+### WinVetSim SIMMGR Version 2.2 5/1/2025
 * Add improved Group Trigger support.<br>
 	&nbsp;&nbsp;&nbsp;&nbsp;Move xml parse functions from scenario.cpp to new file, scenario_xml.cpp
 	
