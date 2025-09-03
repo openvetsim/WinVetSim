@@ -1295,7 +1295,9 @@ trendProcess(struct trend* trend)
 bool
 isRhythmPulsed(char* rhythm)
 {
-	if (strcmp(rhythm, "asystole") == 0)
+	if ((strcmp(rhythm, "asystole") == 0) ||
+		(strcmp(rhythm, "vfib") == 0) ||
+		(strcmp(rhythm, "afib") == 0))
 	{
 		currentIsRegular = false;
 		return (false);

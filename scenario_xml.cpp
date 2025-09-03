@@ -709,7 +709,7 @@ saveData(const char* xmlName, const char* xmlValue)
 				{
 					new_trigger->scene = atoi(value);
 				}
-				else if (strcmp(xmlLevels[4].name, "event") == 0)
+				else if (strcmp(xmlLevels[4].name, "event_id") == 0)
 				{
 					sprintf_s(new_trigger->param_element, 32, "%s", value);
 					new_trigger->test = TRIGGER_TEST_EVENT;
@@ -767,7 +767,7 @@ saveData(const char* xmlName, const char* xmlValue)
 				{
 					new_trigger->scene = atoi(value);
 				}
-				else if (strcmp(xmlLevels[5].name, "event") == 0)
+				else if (strcmp(xmlLevels[5].name, "event_id") == 0)
 				{
 					sprintf_s(new_trigger->param_element, 32, "%s", value);
 					new_trigger->test = TRIGGER_TEST_EVENT;
