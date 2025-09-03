@@ -719,7 +719,7 @@ static void pulse_check(void)
 /**
 * triiger_check
 * 
-* Check for condition met for and event or trigger condition
+* Check for condition met for an event or trigger condition
 */
 int trigger_check(struct scenario_trigger* trig )
 {
@@ -838,6 +838,10 @@ scene_check(void)
 			{
 				if ( trigger_check(trig ) )
 				{
+					if (verbose)
+					{
+						printf("Single Event Met: %s\n", trig->param_element);
+					}
 					logTrigger(trig, 0);
 					startScene(trig->scene);
 					return;
