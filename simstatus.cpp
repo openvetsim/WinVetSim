@@ -1419,7 +1419,14 @@ sendStatus(void)
 			}
 			ctrlCount++;
 			_itoa_s(i + 1, buffer, 256, 10);
-			makejson(buffer, simmgr_shm->simControllers[i].ipAddr);
+			string reply;
+			reply = simmgr_shm->simControllers[i].ipAddr;
+			if (strlen(simmgr_shm->simControllers[i].version))
+			{
+				reply.append(" Version ");
+				reply.append(simmgr_shm->simControllers[i].version);
+			}
+			makejson(buffer, reply);
 		}
 	}
 	if (ctrlCount > 0)
