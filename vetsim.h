@@ -60,6 +60,7 @@
 #include "vetsimTasks.h"
 #include "version.h"
 #include <cstdint>
+#include <string.h>
 
 /*
 #include <fcntl.h>
@@ -68,7 +69,6 @@
 #include <io.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include <share.h>
 */
 // Defines
@@ -433,6 +433,8 @@ int	initSHM(void );
 void log_message_init(void);
 void log_message(const char* filename, const char* message);
 //void log_messaget(const char* filename, TCHAR* message);
+void append_text_to_edit(const wchar_t* newText);
+void append_text_to_edit(char* buffer);
 char* do_command_read(const char* cmd_str, char* buffer, int max_len);
 void get_date(char* buffer, int maxLen);
 char* getETH0_IP();
@@ -470,7 +472,6 @@ void releaseInstructorLock();
 void addEvent(char* str);
 void addComment(char* str);
 void lockAndComment(char* str);
-void forceInstructorLock(void);
 void awrr_restart(void);
 ULONGLONG msec_time_update(void);
 std::string GetLastErrorAsString(void);
@@ -548,3 +549,6 @@ int getVideoFileCount(void);
 void closeVideoCapture(void);
 
 typedef unsigned char byte;
+
+// In VetSim.cpp
+std::wstring Utf8ToWstring(const std::string& utf8);

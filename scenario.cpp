@@ -250,6 +250,90 @@ int parse_header_state = PARSE_HEADER_STATE_NONE;
 struct scenario_data* scenario;
 struct scenario_scene* current_scene;
 
+/*
+ * FUNCTION: scenario_free
+ *
+ * Walk the entire scenario data structure and free every node that was
+ * allocated during XML parsing.  The traversal order is deepest-first so
+ * that no pointer is dereferenced after its target has been freed.
+ *
+ * Memory hierarchy:
+ *   scenario_data  (root — caller frees this after returning)
+ *   ├── event_list  → scenario_event  (one per event element)
+ *   └── scene_list  → scenario_scene  (one per scene element)
+ *         ├── trigger_list  → scenario_trigger  (simple triggers)
+ *         └── group_list    → trigger_group     (trigger groups)
+ *                                └── group_trigger_list → scenario_trigger
+ *
+ * Each linked-list node's snode is the FIRST member of its containing
+ * struct (offset 0), so casting snode* to the container type is valid.
+ *
+ * Parameters: sc — pointer to the scenario_data to clean up.
+ *                  The caller is responsible for freeing sc itself.
+ *
+ * Returns: none
+ */
+static void
+scenario_free(struct scenario_data* sc)
+{
+	struct snode* node;
+	struct snode* next;
+	struct snode* trigNode;
+	struct snode* trigNext;
+
+	if (!sc)
+		return;
+
+	/* --- Free events -------------------------------------------------- */
+	node = sc->event_list.next;
+	while (node)
+	{
+		next = node->next;
+		free((struct scenario_event*)node);
+		node = next;
+	}
+
+	/* --- Free scenes (and everything nested inside each scene) --------- */
+	node = sc->scene_list.next;
+	while (node)
+	{
+		next = node->next;
+		struct scenario_scene* scene = (struct scenario_scene*)node;
+
+		/* Simple triggers on this scene */
+		trigNode = scene->trigger_list.next;
+		while (trigNode)
+		{
+			trigNext = trigNode->next;
+			free((struct scenario_trigger*)trigNode);
+			trigNode = trigNext;
+		}
+
+		/* Trigger groups on this scene */
+		struct snode* groupNode = scene->group_list.next;
+		while (groupNode)
+		{
+			struct snode* groupNext = groupNode->next;
+			struct trigger_group* grp = (struct trigger_group*)groupNode;
+
+			/* Triggers belonging to this group */
+			trigNode = grp->group_trigger_list.next;
+			while (trigNode)
+			{
+				trigNext = trigNode->next;
+				free((struct scenario_trigger*)trigNode);
+				trigNode = trigNext;
+			}
+
+			free(grp);
+			groupNode = groupNext;
+		}
+
+		free(scene);
+		node = next;
+	}
+}
+
 int
 scenario_main(void)
 {
@@ -317,10 +401,13 @@ scenario_main(void)
 		{
 			fprintf(stderr, "%s\n", s_msg);
 		}
-		takeInstructorLock();
-		sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "stopped");
-		simmgr_shm->instructor.scenario.error_flag = 1;
-		releaseInstructorLock();
+		sts = takeInstructorLock();
+		if (sts == 0)
+		{
+			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "stopped");
+			simmgr_shm->instructor.scenario.error_flag = 1;
+			releaseInstructorLock();
+		}
 		return (-1);
 	}
 	if (errCount)
@@ -366,11 +453,14 @@ scenario_main(void)
 		{
 			printf("No Start Scene\n");
 			sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s", "No Start Scene");
-			takeInstructorLock();
-			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
-			sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s", "No Start Scene");
-			simmgr_shm->instructor.scenario.error_flag = 1;
-			releaseInstructorLock();
+			sts = takeInstructorLock();
+			if (sts == 0)
+			{
+				sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
+				sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s", "No Start Scene");
+				simmgr_shm->instructor.scenario.error_flag = 1;
+				releaseInstructorLock();
+			}
 		}
 		parseLog.append(L"Starting scene not found in XML file\n"); 
 		errCount++;
@@ -386,23 +476,29 @@ scenario_main(void)
 	if ( errCount )
 	{
 		sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s", "Errors in XML file. See the log for details.");
-		takeInstructorLock();
-		sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
-		sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s", "Errors in XML file. See the log for details.");
-		simmgr_shm->instructor.scenario.error_flag = 1;
-		releaseInstructorLock();
+		sts = takeInstructorLock();
+		if (sts == 0)
+		{
+			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
+			sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s", "Errors in XML file. See the log for details.");
+			simmgr_shm->instructor.scenario.error_flag = 1;
+			releaseInstructorLock();
+		}
 		printf("erCount is %d\n", errCount);
 		//displayParseLog();
 	}
 	else if (checkOnly)
 	{
 		sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s errCount is %d", "Check Only", errCount);
-		takeInstructorLock();
-		sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
-		sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s errCount is %d", "Check Only", errCount );
-		simmgr_shm->instructor.scenario.error_flag = 1;
-		printf("checkOnly is %d\n", checkOnly);
-		releaseInstructorLock(); 
+		sts = takeInstructorLock();
+		if (sts == 0)
+		{
+			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
+			sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s errCount is %d", "Check Only", errCount);
+			simmgr_shm->instructor.scenario.error_flag = 1;
+			printf("checkOnly is %d\n", checkOnly);
+			releaseInstructorLock();
+		}
 	}
 
 	if (verbose)
@@ -516,8 +612,10 @@ scenario_main(void)
 				//log_message("", s_msg );
 				lockAndComment(s_msg);
 				proc_scenario_state = ScenarioState::ScenarioStopped;
-				printf("Scenario process is exiting\n");
+				log_message("", "Scenario process is exiting\n");
+				scenario_free(scenario);
 				free(scenario);
+				scenario = NULL;
 				return(0);
 			}
 		}
@@ -1056,6 +1154,7 @@ static void
 startScene(int sceneId)
 {
 	struct scenario_scene* new_scene;
+	int sts;
 
 	new_scene = findScene(sceneId);
 	if (!new_scene)
@@ -1063,12 +1162,15 @@ startScene(int sceneId)
 		fprintf(stderr, "Scene %d not found", sceneId);
 		printf("Scene %d not found", sceneId);
 		snprintf(s_msg, MAX_MSG_SIZE, "Scenario: Scene %d not found. Terminating.", sceneId);
-		snprintf(simmgr_shm->status.scenario.error_message, STR_SIZE, "Scenario: Scene %d not found. Terminating.", sceneId);
-		takeInstructorLock();
-		addComment(s_msg);
-		sprintf_s(simmgr_shm->instructor.scenario.state, NORMAL_STRING_SIZE, "%s", "Terminate");
-		sprintf_s(simmgr_shm->status.scenario.scene_name, LONG_STRING_SIZE, "%s", "");
-		releaseInstructorLock();
+		snprintf(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "Scenario: Scene %d not found. Terminating.", sceneId);
+		sts = takeInstructorLock();
+		if (sts == 0)
+		{
+			addComment(s_msg);
+			sprintf_s(simmgr_shm->instructor.scenario.state, NORMAL_STRING_SIZE, "%s", "Terminate");
+			sprintf_s(simmgr_shm->status.scenario.scene_name, LONG_STRING_SIZE, "%s", "");
+			releaseInstructorLock();
+		}
 		return;
 	}
 	showScene(new_scene);
@@ -1090,10 +1192,13 @@ startScene(int sceneId)
 			printf("End scene %s\n", current_scene->name);
 		}
 		snprintf(s_msg, MAX_MSG_SIZE, "Scenario: End Scene %d %s", sceneId, current_scene->name);
-		takeInstructorLock();
-		addComment(s_msg);
-		sprintf_s(simmgr_shm->instructor.scenario.state, NORMAL_STRING_SIZE, "%s", "Terminate");
-		releaseInstructorLock();
+		sts = takeInstructorLock();
+		if (sts == 0)
+		{
+			addComment(s_msg);
+			sprintf_s(simmgr_shm->instructor.scenario.state, NORMAL_STRING_SIZE, "%s", "Terminate");
+			releaseInstructorLock();
+		}
 	}
 	else
 	{

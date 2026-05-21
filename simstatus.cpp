@@ -593,196 +593,206 @@ simstatusHandleCommand(char *args)
 			set_count++;
 			// set command: Split to segments to construct the reference
 			v = explode(key, ':');
-			sprintf_s(buffer, MSG_LENGTH, " \"set_%d\" : {\n    ", set_count);
-			htmlReply += buffer;
-			makejson("class", v[1]);
-			htmlReply += ",\n    ";
-			makejson("param", v[2]);
-			htmlReply += ",\n    ";
-			makejson("value", value);
-			htmlReply += ",\n    ";
-			sts = 0;
+			if (v.size() != 3)
+			{
+				makejson("error", "bad set command");
+				htmlReply += ",\n    ";
+				sts = 3;
+			}
+			else
+			{
+				sprintf_s(buffer, MSG_LENGTH, " \"set_%d\" : {\n    ", set_count);
+				htmlReply += buffer;
+				makejson("class", v[1]);
+				htmlReply += ",\n    ";
+				makejson("param", v[2]);
+				htmlReply += ",\n    ";
+				makejson("value", value);
+				htmlReply += ",\n    ";
+				sts = 0;
 
-			if (v[1].compare("cardiac") == 0)
-			{
-				printf("Calling Cardiac Parse, \"%s\", \"%s\"\n", v[2].c_str(), value.c_str());
-				sts = cardiac_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.cardiac);
-			}
-			else if (v[1].compare("scenario") == 0)
-			{
-				if (v[2].compare("active") == 0)
+				if (v[1].compare("cardiac") == 0)
 				{
-					sprintf_s(simmgr_shm->instructor.scenario.active, STR_SIZE, "%s", value.c_str());
+					printf("Calling Cardiac Parse, \"%s\", \"%s\"\n", v[2].c_str(), value.c_str());
+					sts = cardiac_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.cardiac);
 				}
-				else if (v[2].compare("state") == 0)
+				else if (v[1].compare("scenario") == 0)
 				{
-					sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", value.c_str());
-				}
-				else if (v[2].compare("record") == 0)
-				{
-					simmgr_shm->instructor.scenario.record = atoi(value.c_str());
-				}
-				else
-				{
-					sts = 1;
-				}
-			}
-			else if (v[1].compare("respiration") == 0)
-			{
-				sts = respiration_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.respiration);
-			}
-			else if (v[1].compare("general") == 0)
-			{
-				sts = general_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.general);
-			}
-			else if (v[1].compare("telesim") == 0)
-			{
-				sts = telesim_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.telesim);
-			}
-			else if (v[1].compare("vocals") == 0)
-			{
-				sts = vocals_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.vocals);
-			}
-			else if (v[1].compare("media") == 0)
-			{
-				sts = media_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.media);
-			}
-			else if (v[1].compare("event") == 0)
-			{
-				if (v[2].compare("event_id") == 0)
-				{
-					if (value.length() != 0)
+					if (v[2].compare("active") == 0)
 					{
-						addEvent((char*)value.c_str());
-						sts = 0;
+						sprintf_s(simmgr_shm->instructor.scenario.active, STR_SIZE, "%s", value.c_str());
+					}
+					else if (v[2].compare("state") == 0)
+					{
+						sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", value.c_str());
+					}
+					else if (v[2].compare("record") == 0)
+					{
+						simmgr_shm->instructor.scenario.record = atoi(value.c_str());
 					}
 					else
 					{
-						sts = 4;
+						sts = 1;
 					}
 				}
-				else if (v[2].compare("comment") == 0)
+				else if (v[1].compare("respiration") == 0)
 				{
-					if (value.length() != 0)
+					sts = respiration_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.respiration);
+				}
+				else if (v[1].compare("general") == 0)
+				{
+					sts = general_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.general);
+				}
+				else if (v[1].compare("telesim") == 0)
+				{
+					sts = telesim_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.telesim);
+				}
+				else if (v[1].compare("vocals") == 0)
+				{
+					sts = vocals_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.vocals);
+				}
+				else if (v[1].compare("media") == 0)
+				{
+					sts = media_parse(v[2].c_str(), value.c_str(), &simmgr_shm->instructor.media);
+				}
+				else if (v[1].compare("event") == 0)
+				{
+					if (v[2].compare("event_id") == 0)
 					{
-						sprintf_s(smbuf, sizeof(smbuf), "Comment: %s", (char*)value.c_str());
-						if (strcmp(simmgr_shm->status.scenario.state, "Running") == 0 ||
-							strcmp(simmgr_shm->status.scenario.state, "Paused") == 0)
+						if (value.length() != 0)
 						{
-							addComment(smbuf);
+							addEvent((char*)value.c_str());
 							sts = 0;
 						}
 						else
 						{
-							addComment(smbuf);
-							sts = 5;
+							sts = 4;
+						}
+					}
+					else if (v[2].compare("comment") == 0)
+					{
+						if (value.length() != 0)
+						{
+							sprintf_s(smbuf, sizeof(smbuf), "Comment: %s", (char*)value.c_str());
+							if (strcmp(simmgr_shm->status.scenario.state, "Running") == 0 ||
+								strcmp(simmgr_shm->status.scenario.state, "Paused") == 0)
+							{
+								addComment(smbuf);
+								sts = 0;
+							}
+							else
+							{
+								addComment(smbuf);
+								sts = 5;
+							}
+						}
+						else
+						{
+							sts = 4;
 						}
 					}
 					else
 					{
-						sts = 4;
+						sts = 2;
+					}
+				}
+				else if (v[1].compare("cpr") == 0)
+				{
+					if (v[2].compare("compression") == 0)
+					{
+						simmgr_shm->instructor.cpr.compression = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("release") == 0)
+					{
+						simmgr_shm->instructor.cpr.release = atoi(value.c_str());
+						sts = 0;
+					}
+					else
+					{
+						sts = 2;
+					}
+				}
+				else if (v[1].compare("pulse") == 0)
+				{
+					if (v[2].compare("right_dorsal") == 0)
+					{
+						simmgr_shm->status.pulse.right_dorsal = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("left_dorsal") == 0)
+					{
+						simmgr_shm->status.pulse.left_dorsal = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("right_femoral") == 0)
+					{
+						simmgr_shm->status.pulse.right_femoral = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("left_femoral") == 0)
+					{
+						simmgr_shm->status.pulse.left_femoral = atoi(value.c_str());
+						sts = 0;
+					}
+					else
+					{
+						sts = 2;
+					}
+				}
+				else if (v[1].compare("auscultation") == 0)
+				{
+					if (v[2].compare("side") == 0)
+					{
+						simmgr_shm->status.auscultation.side = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("row") == 0)
+					{
+						simmgr_shm->status.auscultation.row = atoi(value.c_str());
+						sts = 0;
+					}
+					else if (v[2].compare("col") == 0)
+					{
+						simmgr_shm->status.auscultation.col = atoi(value.c_str());
+						sts = 0;
+					}
+					else
+					{
+						sts = 2;
 					}
 				}
 				else
 				{
 					sts = 2;
 				}
-			}
-			else if (v[1].compare("cpr") == 0)
-			{
-				if (v[2].compare("compression") == 0)
+
+				if (sts == 1)
 				{
-					simmgr_shm->instructor.cpr.compression = atoi(value.c_str());
-					sts = 0;
+					makejson("status", "invalid param");
 				}
-				else if (v[2].compare("release") == 0)
+				else if (sts == 2)
 				{
-					simmgr_shm->instructor.cpr.release = atoi(value.c_str());
-					sts = 0;
+					makejson("status", "invalid class");
 				}
-				else
+				else if (sts == 3)
 				{
-					sts = 2;
+					makejson("status", "invalid parameter");
 				}
-			}
-			else if (v[1].compare("pulse") == 0)
-			{
-				if (v[2].compare("right_dorsal") == 0)
+				else if (sts == 4)
 				{
-					simmgr_shm->status.pulse.right_dorsal = atoi(value.c_str());
-					sts = 0;
+					makejson("status", "Null string in parameter");
 				}
-				else if (v[2].compare("left_dorsal") == 0)
+				else if (sts == 5)
 				{
-					simmgr_shm->status.pulse.left_dorsal = atoi(value.c_str());
-					sts = 0;
-				}
-				else if (v[2].compare("right_femoral") == 0)
-				{
-					simmgr_shm->status.pulse.right_femoral = atoi(value.c_str());
-					sts = 0;
-				}
-				else if (v[2].compare("left_femoral") == 0)
-				{
-					simmgr_shm->status.pulse.left_femoral = atoi(value.c_str());
-					sts = 0;
+					makejson("status", "Scenario is not running");
 				}
 				else
 				{
-					sts = 2;
+					makejson("status", "ok");
 				}
+				htmlReply += "\n    }";
 			}
-			else if (v[1].compare("auscultation") == 0)
-			{
-				if (v[2].compare("side") == 0)
-				{
-					simmgr_shm->status.auscultation.side = atoi(value.c_str());
-					sts = 0;
-				}
-				else if (v[2].compare("row") == 0)
-				{
-					simmgr_shm->status.auscultation.row = atoi(value.c_str());
-					sts = 0;
-				}
-				else if (v[2].compare("col") == 0)
-				{
-					simmgr_shm->status.auscultation.col = atoi(value.c_str());
-					sts = 0;
-				}
-				else
-				{
-					sts = 2;
-				}
-			}
-			else
-			{
-				sts = 2;
-			}
-			if (sts == 1)
-			{
-				makejson("status", "invalid param");
-			}
-			else if (sts == 2)
-			{
-				makejson("status", "invalid class");
-			}
-			else if (sts == 3)
-			{
-				makejson("status", "invalid parameter");
-			}
-			else if (sts == 4)
-			{
-				makejson("status", "Null string in parameter");
-			}
-			else if (sts == 5)
-			{
-				makejson("status", "Scenario is not running");
-			}
-			else
-			{
-				makejson("status", "ok");
-			}
-			htmlReply += "\n    }";
 		}
 		else
 		{

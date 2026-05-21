@@ -48,16 +48,10 @@ XMLRead::open(const char* path)
     name[0] = 0;
     value[0] = 0;
     idx = 0;
-    TCHAR* tchar = new TCHAR[strlen(path) + 4];
-    size_t i;
-    for (i = 0; i <= strlen(path); i++)
-    {
-        tchar[i] = path[i];
-    }
 
     printf("XMLRead open %s\n", path);
 
-    hFile = CreateFile((LPCWSTR)tchar,               // file to open
+    hFile = CreateFileA(path,               // file to open
         GENERIC_READ,          // open for reading
         FILE_SHARE_READ,       // share for reading
         NULL,                  // default security
@@ -66,28 +60,25 @@ XMLRead::open(const char* path)
         NULL);                 // no attr. template
     if (hFile == INVALID_HANDLE_VALUE)
     {
-        DisplayError((LPTSTR)(TEXT("CreateFile")));
-        _tprintf(TEXT("Terminal failure: unable to open file \"%s\" for read.\n"), tchar);
+        printf("Terminal failure: unable to open file \"%s\" for read.\n", path);
         return (-1);
     }
 	sts = GetFileSizeEx(hFile, &filelen);
     if ( !sts )
     {
-        DisplayError((LPTSTR)(TEXT("GetFileSizeEx")));
-        _tprintf(TEXT("Terminal failure: unable to get file length\"%s\" for read.\n"), tchar);
+        printf("Terminal failure: unable to get file length\"%s\" for read.\n", path);
         return (-1);
     }
     
     len = (size_t)filelen.LowPart;
     XMLRead::xml = (char *)calloc(len+32, 1);
     XMLRead::idx = 0;
-    _tprintf(TEXT("ReadFile Request %d bytes.\n"), (int)len);
+    printf("ReadFile Request %d bytes.\n", (int)len);
 
     sts = ReadFile(hFile, (LPVOID)&XMLRead::xml[0], (DWORD)len, &ol, NULL);
     if ( !sts || ol != len)
     {
-        DisplayError((LPTSTR)(TEXT("ReadFile")));
-        _tprintf(TEXT("Terminal failure: ReadFile for \"%s\" returned %d bytes with %d epected.\n"), tchar, ol, (int)len);
+        printf("Terminal failure: ReadFile for \"%s\" returned %d bytes with %d epected.\n", path, ol, (int)len);
         printf(" %.40s...\n", XMLRead::xml);
         return (-1);
     }

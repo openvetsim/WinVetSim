@@ -104,8 +104,24 @@ struct scenario_event* new_event;
 void
 appendToParseLog(char* str)
 {
-	::std::wstring wideStr;
-	int convertResult = MultiByteToWideChar(CP_UTF8, 0, simmgr_shm->status.scenario.error_message, (int)strlen(simmgr_shm->status.scenario.error_message), NULL, 0);
+	// 1. Determine the required buffer size
+	// Passing -1 handles the null terminator automatically
+	int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, str, -1, nullptr, 0);
+
+	if (sizeNeeded <= 0)
+	{
+		// Handle error (e.g., GetLastError())
+		return;
+	}
+
+	// 2. Perform the actual conversion
+	std::wstring wideStr(sizeNeeded, 0);
+	int convertResult = MultiByteToWideChar(CP_UTF8, 0, str, -1, &wideStr[0], sizeNeeded);
+
+	// Remove the extra null terminator if using std::wstring(sizeNeeded, 0)
+	// as -1 includes the null terminator in the count
+	wideStr.resize(sizeNeeded - 1);
+
 	if (convertResult > 0)
 	{
 		wideStr.resize(convertResult + 10);
@@ -441,7 +457,7 @@ validateScenes()
 		}
 		e_snode = get_next_llist(e_snode);
 	}
-	return (NULL);
+	return (0);
 }
 
 /**
@@ -1215,8 +1231,6 @@ startParseState(int lvl, char* name)
 		case PARSE_STATE_NONE:
 			break;
 		}
-
-
 		break;
 	case 4:
 		switch (parse_state)
@@ -1248,6 +1262,7 @@ startParseState(int lvl, char* name)
 					//	printf("Trigger Group %d: Set Triggers Needed to %d\n", new_scene->triggers_needed);
 					//}
 				}
+				break;
 		}
 		break;
 	case 5:
@@ -1259,7 +1274,11 @@ startParseState(int lvl, char* name)
 
 				}
 				break;
+			default:
+				break;
 		}
+		break;
+
 	default:
 		break;
 	}

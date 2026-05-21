@@ -35,6 +35,8 @@ int checkProcessRunning(void);
 
 char WVSversion[STR_SIZE];
 
+HFONT hLogFont;
+
 __int64
 getBuildDate(void)
 {
@@ -125,6 +127,7 @@ setWVSVersion(void)
 //#include <tchar.h>
 #include <strsafe.h>
 #include <afxwin.h>
+#include <string>
 //#include <tlhelp32.h>
 
 // C RunTime Header Files
@@ -308,80 +311,86 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 	
 	case WM_CREATE:
-		/*hEdit = CreateWindowEx(
+		// Scrolling log window — fills the client area below the header text
+		hEdit = CreateWindowEx(
 			WS_EX_CLIENTEDGE,
 			L"EDIT",
 			NULL,
-			WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-			20, 100,    // x, y position
-			650, 350,  // width, height
+			WS_CHILD | WS_VISIBLE | WS_VSCROLL |
+			ES_LEFT | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+			5, 75,      // x, y — below the three header lines
+			680, 380,   // initial size; resized dynamically in WM_SIZE
 			hWnd,
 			NULL,
 			ghInstance,
 			NULL
-		);*/
-		/*hButton = CreateWindowEx(
-			NULL,
-			L"Button",
-			L"Button Example",
-			WS_BORDER | WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			20, 20,
-			100, 30,
-			hWnd, NULL,
-			ghInstance,
-			NULL); */
-		/*hCombo = CreateWindowEx(
-			NULL,
-			L"ComboBox",
-			L"darkblue",
-			WS_BORDER | WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-			20, 50,
-			100, 100,
-			hWnd, NULL,
-			ghInstance,
-			NULL);*/
-		/*hEdit = CreateWindowEx(
-			NULL,
-			L"Edit",
-			L"edit box example",
-			WS_BORDER | WS_CHILD | WS_VISIBLE,
-			20, 300,
-			100, 300,
-			hWnd, NULL,
-			ghInstance,
-			NULL);*/
-		/*hList = CreateWindowEx(
-			NULL,
-			L"ListBox",
-			L"db db db",
-			WS_BORDER | WS_CHILD | WS_VISIBLE,
-			100, 0,
-			100, 200,
-			hWnd, NULL,
-			ghInstance,
-			NULL); */
-		/*hScroll = CreateWindowEx(
-			NULL,
-			L"ScrollBar",
-			L"",
-			WS_BORDER | WS_CHILD | WS_VISIBLE | SBS_VERT,
-			10, 50,
-			650, 400,
-			hWnd, NULL,
-			ghInstance,
-			NULL); */
-		/*hStatic = CreateWindowEx(
-			NULL,
-			L"Static",
-			L"",
-			WS_BORDER | WS_CHILD | WS_VISIBLE | SS_BLACKRECT,
-			300, 90,
-			100, 30,
-			hWnd, NULL,
-			ghInstance,
-			NULL);*/
-
+		);
+		if (hEdit)
+		{
+			// Use Consolas (monospace) for clean log output
+			hLogFont = CreateFontW(
+				-14, 0, 0, 0,
+				FW_NORMAL,
+				FALSE, FALSE, FALSE,
+				DEFAULT_CHARSET,
+				OUT_DEFAULT_PRECIS,
+				CLIP_DEFAULT_PRECIS,
+				CLEARTYPE_QUALITY,
+				FIXED_PITCH | FF_MODERN,
+				L"Consolas"
+			);
+			if (hLogFont)
+				SendMessageW(hEdit, WM_SETFONT, (WPARAM)hLogFont, TRUE);
+		}
 		break;
+	case WM_SIZE:
+		// Keep the log edit control filling the client area below the header
+		if (hEdit)
+		{
+			int clientW = LOWORD(lParam);
+			int clientH = HIWORD(lParam);
+			SetWindowPos(hEdit, NULL,
+				5, 75,
+				clientW - 10, clientH - 80,
+				SWP_NOZORDER);
+		}
+		break;
+
+	case WM_APP_LOG:
+	{
+		// Delivered by append_text_to_edit() from any thread via PostMessageW.
+		// We are on the UI thread here, so all SendMessageW calls to hEdit are safe.
+		// lParam is a wchar_t* allocated with _wcsdup(); we must free() it.
+		const wchar_t* text = reinterpret_cast<const wchar_t*>(lParam);
+		if (text && hEdit)
+		{
+			// Append the line with CRLF using EM_REPLACESEL — O(1)
+			int len = GetWindowTextLengthW(hEdit);
+			SendMessageW(hEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+
+			std::wstring line = text;
+			line += L"\r\n";
+			SendMessageW(hEdit, EM_REPLACESEL, FALSE, (LPARAM)line.c_str());
+			SendMessageW(hEdit, EM_SCROLLCARET, 0, 0);
+
+			// Cap line count to prevent unbounded memory growth
+			int lineCount = (int)SendMessageW(hEdit, EM_GETLINECOUNT, 0, 0);
+			if (lineCount > LOG_WINDOW_MAX_LINES)
+			{
+				int firstChar = (int)SendMessageW(hEdit, EM_LINEINDEX, 0, 0);
+				int lastChar  = (int)SendMessageW(hEdit, EM_LINEINDEX, LOG_WINDOW_TRIM_LINES, 0);
+				SendMessageW(hEdit, EM_SETSEL, (WPARAM)firstChar, (LPARAM)lastChar);
+				SendMessageW(hEdit, EM_REPLACESEL, FALSE, (LPARAM)L"");
+
+				len = GetWindowTextLengthW(hEdit);
+				SendMessageW(hEdit, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+				SendMessageW(hEdit, EM_SCROLLCARET, 0, 0);
+			}
+		}
+		free((void*)text);
+		return 0;
+	}
+
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
 
@@ -415,12 +424,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
-		hdc = BeginPaint(hWnd, &ps);
-		TextOut(hdc,
-			5, 5,
-			leaving, (int)_tcslen(leaving));
-		EndPaint(hWnd, &ps);
 		stopPHPServer();
+		DeleteObject(hLogFont);     // free GDI resource before the message loop exits
 		PostQuitMessage(0);
 		break;
 
@@ -619,8 +624,10 @@ initializeConfiguration(void)
 	{
 		et = strerror_s(errorstr, errno);
 		printf("_dupenv_s: %s\n", errorstr );
+		return;
 	}
 	sprintf_s(localConfig.html_path, "%s\\%s", pValue, htmlPath);
+	free(pValue);
 
 	printf("Default html path is %s\n", localConfig.html_path);
 	// Allow parameters to be overridedn from registry

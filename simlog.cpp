@@ -5,7 +5,7 @@
  *
  * This file is part of the sim-mgr distribution (https://github.com/OpenVetSimDevelopers/sim-mgr).
  *
- * Copyright (c) 2019 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
+ * Copyright (c) 2019-2026 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -124,7 +124,6 @@ simlog_open(int rw)
 	int sts;
 	char buffer[512];
 	char errBuffer[256];
-	int trycount;
 
 	if (simlog_fd)
 	{
@@ -141,23 +140,10 @@ simlog_open(int rw)
 	if (rw == SIMLOG_MODE_WRITE || rw == SIMLOG_MODE_CREATE)
 	{
 		// Take the lock
-		trycount = 0;
-		while (trycount++ < 50)
+		sts = WaitForSingleObject(simmgr_shm->logfile.sema, 1000);
+		if (sts != WAIT_OBJECT_0)
 		{
-			sts = WaitForSingleObject(simmgr_shm->logfile.sema, INFINITE);
-			if (sts == WAIT_OBJECT_0)
-			{
-				break;
-			}
-			else
-			{
-				printf("simlog_open failed to take sema 0x%08xL\n", sts);
-				return (-3);
-			}
-		}
-		if (trycount >= 50)
-		{
-			// Could not get lock soon enough. Try again next time.
+			// Could not get lock. Try again next time.
 			log_message("", "simlog_open failed to take logfile mutex");
 			printf("simlog_open failed to take logfile mutex\n");
 			return (-1);
@@ -188,10 +174,10 @@ simlog_open(int rw)
 		sts = fopen_s(&simlog_fd, simlog_file, "r");
 		if (sts || !simlog_fd)
 		{
-			sprintf_s(buffer, 512, "simlog_open failed to open for read: %s", simlog_file); 
+			sprintf_s(errBuffer, 256, "simlog_open failed to open for read: %s", simlog_file);
 			printf("simlog_open failed to open for read:%s : %s\n",
 				simlog_file, errBuffer);
-			log_message("", buffer);
+			log_message("", errBuffer);
 		}
 	}
 	if (!simlog_fd)

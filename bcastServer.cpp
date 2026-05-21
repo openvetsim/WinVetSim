@@ -20,64 +20,86 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 #include "winsock2.h"
-#include <iostream>
-#include <conio.h>
-#include <functional>
 #include <ws2tcpip.h>
-
 #include <iostream>
 #include <cstdio>
 #include <conio.h>
+#include <functional>
 #include "vetsimDefs.h"
+
+extern int closeFlag;   // defined in simstatus.cpp; set to 1 on shutdown
 
 int bcastReply(void)
 {
 	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-	SOCKET sock;
-	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	char broadcast = '1';
-	//     This option is needed on the socket in order to be able to receive broadcast messages
-	//   If not set the receiver will not receive broadcast messages in the local network.
-	if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast)) < 0)
+	auto sts = WSAStartup(MAKEWORD(2, 2), &wsaData);
+	if (sts == 0)
 	{
-		std::cout << "Error in setting Broadcast option";
-		closesocket(sock);
-		return 0;
-	}
-
-	struct sockaddr_in Recv_addr;
-	struct sockaddr_in Sender_addr;
-	int len = sizeof(struct sockaddr_in);
-	char recvbuff[50];
-	int recvbufflen = 50;
-	Recv_addr.sin_family = AF_INET;
-	Recv_addr.sin_port = htons(PORT_STATUS);
-	Recv_addr.sin_addr.s_addr = INADDR_ANY;
-	auto ret = bind(sock, (sockaddr*)&Recv_addr, sizeof(Recv_addr));
-
-	if (ret < 0)
-	{
-		std::cout << "Error in BINDING" << WSAGetLastError();
-		closesocket(sock);
-		return 0;
-	}
-
-	do
-	{
-		std::cout << "\nWaiting for message...\n";
-		memset(recvbuff, 0, sizeof(recvbuff));
-		recvfrom(sock, recvbuff, recvbufflen, 0, (sockaddr*)&Sender_addr, &len);
-		std::cout << "Received Message is: " << recvbuff;
-		if (strcmp("WVS_LOOK", recvbuff) == 0)
+		SOCKET sock;
+		sock = socket(AF_INET, SOCK_DGRAM, 0);
+		int broadcast = 1;
+		//     This option is needed on the socket in order to be able to receive broadcast messages
+		//   If not set the receiver will not receive broadcast messages in the local network.
+		if (setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (const char*)&broadcast, sizeof(broadcast)) < 0)
 		{
-			inet_ntop(AF_INET, &(Sender_addr.sin_addr), recvbuff, INET_ADDRSTRLEN);
-			std::cout << " From " << recvbuff;
-			sprintf_s(recvbuff, "WVS_FOUND");
-			ret = sendto(sock, recvbuff, (int)strlen(recvbuff), 0, (struct sockaddr*)&Sender_addr, len);
+			std::cout << "Error in setting Broadcast option";
+			sts = -1;
 		}
-	} while (1);
+		else
+		{
+			struct sockaddr_in Recv_addr;
+			struct sockaddr_in Sender_addr;
+			int len = sizeof(struct sockaddr_in);
+			char recvbuff[50];
+			int recvbufflen = 50;
+			Recv_addr.sin_family = AF_INET;
+			Recv_addr.sin_port = htons(PORT_STATUS);
+			Recv_addr.sin_addr.s_addr = INADDR_ANY;
+			auto ret = bind(sock, (sockaddr*)&Recv_addr, sizeof(Recv_addr));
 
-	closesocket(sock);
+			if (ret < 0)
+			{
+				std::cout << "Error in BINDING" << WSAGetLastError();
+				sts = -1;
+			}
+			else
+			{
+				// Wake up every second so the loop can check closeFlag even
+				// when no broadcast arrives.
+				DWORD recvTimeout = 1000;
+				if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO,
+					(const char*)&recvTimeout, sizeof(recvTimeout)) < 0)
+				{
+					std::cout << "Warning: SO_RCVTIMEO failed; shutdown may be delayed\n";
+				}
+
+				do
+				{
+					std::cout << "\nWaiting for message...\n";
+					memset(recvbuff, 0, sizeof(recvbuff));
+					auto sts = recvfrom(sock, recvbuff, recvbufflen, 0, (sockaddr*)&Sender_addr, &len);
+					if (sts != SOCKET_ERROR)
+					{
+						std::cout << "Received Message is: " << recvbuff;
+						if (strcmp("WVS_LOOK", recvbuff) == 0)
+						{
+							inet_ntop(AF_INET, &(Sender_addr.sin_addr), recvbuff, INET_ADDRSTRLEN);
+							std::cout << " From " << recvbuff;
+							sprintf_s(recvbuff, "WVS_FOUND");
+							ret = sendto(sock, recvbuff, (int)strlen(recvbuff), 0, (struct sockaddr*)&Sender_addr, len);
+							sts = 0;
+						}
+					}
+				} while (!closeFlag);
+			}
+		}
+		closesocket(sock);
+	}
+	else
+	{
+
+		printf("WSAStartup returns %d\n", sts);
+	}
 	WSACleanup();
+	return (sts);
 }

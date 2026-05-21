@@ -263,10 +263,6 @@ respiration_parse(const char* elem, const char* value, struct respiration* resp)
 	{
 		resp->right_lung_sound_volume = atoi(value);
 	}
-	else if (strcmp(elem, "right_lung_sound_volume") == 0)
-	{
-		resp->right_lung_sound_volume = atoi(value);
-	}
 	else if (strcmp(elem, "right_lung_sound_mute") == 0)
 	{
 		resp->right_lung_sound_mute = atoi(value);

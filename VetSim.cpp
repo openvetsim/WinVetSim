@@ -5,8 +5,8 @@
  *
  * This file is part of the sim-mgr distribution.
  *
- * Copyright (c) 2019-2021 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
- * Copyright (c) 2019-2025 ITown Design, Ithaca, NY
+ * Copyright (c) 2019-2026 VetSim, Cornell University College of Veterinary Medicine Ithaca, NY
+ * Copyright (c) 2019-2026 ITown Design, Ithaca, NY
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -129,17 +129,6 @@ setPulseState(int val)
 				setPulseState(1);
 			break;
 		}
-		//pulseStateCount++;
-		//if (pulseStateCount > 100)
-		//{
-		//	
-		//	WriteFile(hComm, "MsgeOUt", 1, &byteswritten, NULL);
-		//	cout << "MsgeOUt" << endl;
-		//	pulseStateCount = 0;
-		//}
-
-		//DWORD byteswritten;
-		//WriteFile(hComm, "\n", 1, &byteswritten, NULL);
 	}
 }
 
@@ -153,64 +142,7 @@ int vetsim()
 	extern struct obsData obsd;
 	setvbuf(stdout, NULL, _IONBF, 0);
 	char cmd[BUF_SIZE];
-	
-#ifdef DO_COMM
-	LPCWSTR pcCommPort = L"COM5";
-//	TCHAR *pcCommPort = TEXT("COM3");
-	std::cout << "Opening COMM Port 5" << endl;
-	hComm = CreateFile(pcCommPort,
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		NULL,
-		OPEN_EXISTING,
-		0, // FILE_FLAG_OVERLAPPED,
-		NULL );
-	if (hComm == INVALID_HANDLE_VALUE)
-	{
-		//std::cout << "ER!" << endl;// error opening port; abort
-		//std::cout << GetLastError();
-		DWORD error = GetLastError();
-		cout << "CreateFile returns " << hComm << " : " << error << " : " << std::system_category().message(error) << endl;
 		
-		if (GetLastError() == 2)
-		{
-			std::cout << "Port 5 is not available!" << endl;
-		}
-		if (GetLastError() == 5)
-		{
-			//std::cout << "Port 3 is already taken!" << endl;
-			std::string message = std::system_category().message(error);
-			std::cout << message << endl;
-		}
-		
-		return false;
-	}
-	else
-	{
-		std::cout << "COM5 is available." << endl;  // And reday to use (TX/RX)
-	}
-	// Disable the RTS line.
-	struct _DCB mComDCB;
-	char msg[256];
-	LPCWSTR instr = L"baud=115384 parity=N data=8 stop=1";
-	if (!BuildCommDCB(instr, &mComDCB))
-	{
-		UINT error = GetLastError();
-		sprintf_s(msg, "SetPortStatus: BuildCommDCB failed: GetLastError = %d", error);
-		std::cout <<  msg << endl;
-		return false;
-	}
-	mComDCB.fAbortOnError = (DWORD)1;
-	mComDCB.fTXContinueOnXoff = (DWORD)1;
-	mComDCB.fRtsControl = RTS_CONTROL_DISABLE;
-	if (!(SetCommState(hComm, &mComDCB)))
-	{
-		UINT error = GetLastError();
-		sprintf_s(msg, "SetPortStatus: SetCommState failed: GetLastError = %d", error);
-		std::cout << msg << endl;
-	}
-	EscapeCommFunction(hComm, SETRTS);
-#endif	
 	initSHM();
 
 	simmgrInitialize();
@@ -236,10 +168,32 @@ int vetsim()
 		sprintf_s(msg_buf, BUF_SIZE, "%s", "PHP Server OK!!");
 		log_message("", msg_buf);
 	}
+
 	// Open web page
-	sprintf_s(cmd, BUF_SIZE, "start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );
-	system(cmd);
-	
+	sprintf_s(cmd, BUF_SIZE, "cmd /c start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+	BOOL created = CreateProcessA(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+	if (!created)
+	{
+		DWORD error = GetLastError();
+
+		// Log the command line that was attempted
+		log_message("", cmd);
+
+		sprintf_s(msg_buf, BUF_SIZE, "CreateProcess failed with error %lu: %s", error, std::system_category().message(error).c_str());
+		printf("%s\n", msg_buf);
+		log_message("", msg_buf);
+	}
+	else
+	{
+		// We don't need the handles; close them.
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
 	obsd.obsWnd = NULL;
 
 	while (1)
@@ -302,6 +256,15 @@ simmgrInitialize(void)
 
 	// server
 	do_command_read("hostname.exe", simmgr_shm->server.name, sizeof(simmgr_shm->server.name) - 1);
+
+	char buffer[256];
+
+	sprintf_s(buffer, 256, "Hostname is %s", simmgr_shm->server.name);
+
+#ifdef NDEBUG
+	append_text_to_edit(buffer);
+#endif
+
 	ptr = getETH0_IP();
 	sprintf_s(simmgr_shm->server.ip_addr, STR_SIZE, "%s", ptr);
 	// server_time and msec_time are updated in the loop
@@ -312,7 +275,7 @@ simmgrInitialize(void)
 	sprintf_s(simmgr_shm->status.scenario.active, STR_SIZE, "%s", "default");
 	sprintf_s(simmgr_shm->status.scenario.state, STR_SIZE, "%s", "Stopped");
 	simmgr_shm->status.scenario.record = 0;
-	sprintf_s(simmgr_shm->status.scenario.error_message, STR_SIZE, "%s", "");
+	sprintf_s(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "%s", "");
 	simmgr_shm->status.scenario.error_flag = 0;
 
 	// instructor/sema
@@ -328,7 +291,7 @@ simmgrInitialize(void)
 	sprintf_s(simmgr_shm->instructor.scenario.active, STR_SIZE, "%s", "");
 	sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "");
 	simmgr_shm->instructor.scenario.record = -1;
-	sprintf_s(simmgr_shm->instructor.scenario.error_message, STR_SIZE, "%s", "");
+	sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s", "");
 	simmgr_shm->instructor.scenario.error_flag = -1;
 
 	// Log File
@@ -336,7 +299,11 @@ simmgrInitialize(void)
 		NULL,              // default security attributes
 		FALSE,             // initially not owned
 		NULL);             // unnamed mutex
-
+	if (!simmgr_shm->logfile.sema)
+	{
+		printf("CreateMutex error: %d\n", GetLastError());
+		exit(203);
+	}
 	simmgr_shm->logfile.active = 0;
 	sprintf_s(simmgr_shm->logfile.filename, FILENAME_SIZE, "%s", "");
 	simmgr_shm->logfile.lines_written = 0;
@@ -1378,7 +1345,7 @@ scan_commands(void)
 	if (simmgr_shm->instructor.scenario.error_flag >= 0)
 	{
 		simmgr_shm->status.scenario.error_flag = simmgr_shm->instructor.scenario.error_flag;
-		sprintf_s(simmgr_shm->status.scenario.error_message, "%s", simmgr_shm->instructor.scenario.error_message);
+		sprintf_s(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "%s", simmgr_shm->instructor.scenario.error_message);
 		simmgr_shm->instructor.scenario.error_flag = -1;
 	}
 	if (strlen(simmgr_shm->instructor.scenario.state) > 0)
@@ -1578,11 +1545,6 @@ scan_commands(void)
 	{
 		simmgr_shm->status.cardiac.pr_interval = simmgr_shm->instructor.cardiac.pr_interval;
 		simmgr_shm->instructor.cardiac.pr_interval = -1;
-	}
-	if (simmgr_shm->instructor.cardiac.qrs_interval >= 0)
-	{
-		simmgr_shm->status.cardiac.qrs_interval = simmgr_shm->instructor.cardiac.qrs_interval;
-		simmgr_shm->instructor.cardiac.qrs_interval = -1;
 	}
 	if (simmgr_shm->instructor.cardiac.qrs_interval >= 0)
 	{
@@ -2150,7 +2112,7 @@ start_scenario(void)
 		sts = recordStartStop(1);
 		if (sts != 0)
 		{
-			sprintf_s(simmgr_shm->status.scenario.error_message, "OBS not running: %s", "Start OBS or uncheck \"Start Video with Scenario\" box. Then start scenario.");
+			sprintf_s(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "OBS not running: %s", "Start OBS or uncheck \"Start Video with Scenario\" box. Then start scenario.");
 			simmgr_shm->status.scenario.error_flag = 1;
 			updateScenarioState(ScenarioState::ScenarioStopped);
 		}
@@ -2165,7 +2127,7 @@ start_scenario(void)
 					if (cc == 'q' || cc == 'Q')
 					{
 						printf("Quit Waiting for Video File\n");
-						sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Quit Waiting for Video File");
+						sprintf_s(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "Failed to start recording: %s", "Quit Waiting for Video File");
 						simmgr_shm->status.scenario.error_flag = 1;
 						updateScenarioState(ScenarioState::ScenarioStopped);
 						break;
@@ -2174,7 +2136,7 @@ start_scenario(void)
 				if (tryCount++ > OBS_START_WAIT_LOOPS)
 				{
 					log_message("", "timed out Waiting for Video File\n");
-					sprintf_s(simmgr_shm->status.scenario.error_message, "Failed to start recording: %s", "Timed Out Waiting for Video File");
+					sprintf_s(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "Failed to start recording: %s", "Timed Out Waiting for Video File");
 					simmgr_shm->status.scenario.error_flag = 1;
 					updateScenarioState(ScenarioState::ScenarioStopped);
 					break;
@@ -2376,4 +2338,27 @@ updateScenarioState(ScenarioState new_state)
 		}
 	}
 	return (rval);
+}
+
+
+
+std::wstring Utf8ToWstring(const string& utf8) {
+	
+	std::wstring wstr_empty(1, L'\0');
+	if (utf8.empty())
+	{
+		return { wstr_empty };
+	}
+	int required = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+	if (required == 0)
+	{
+		return { wstr_empty };
+	}
+	std::wstring wstr(required, L'\0');
+	MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wstr[0], required);
+	if (!wstr.empty() && wstr.back() == L'\0')
+	{
+		wstr.pop_back(); // remove terminating null
+	}
+	return wstr;
 }

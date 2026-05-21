@@ -36,7 +36,7 @@ insert_llist(struct snode* entry, struct snode* list)
 		if (limit-- == 0)
 		{
 			fprintf(stderr, "insert_llist: Limit exceeded\n");
-			exit(-1);
+			return;
 		}
 	}
 	list->next = entry;

@@ -66,6 +66,9 @@
     <ClCompile Include="scenario_xml.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="packages\nlohmann.json.3.12.0\build\native\include\nlohmann\json.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="vetsim.h">

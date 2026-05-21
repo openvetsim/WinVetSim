@@ -108,7 +108,11 @@ log_message_init(void)
 		NULL,              // default security attributes
 		FALSE,             // initially not owned
 		NULL);             // unnamed mutex
-
+	if (!log_sema)
+	{
+		printf("CreateMutex error: %d\n", GetLastError());
+		exit(203);
+	}
 	log_message("", "Log Started");
 
 	// Restore current directory
@@ -120,31 +124,48 @@ log_message_init(void)
 #include <string>
 
 extern HWND hEdit;
+extern HWND mainWindow;
 
+/*
+ * append_text_to_edit(const wchar_t*)
+ *
+ * Safe for calls from any thread. Heap-copies the string and posts a
+ * WM_APP_LOG message to the UI thread, which appends it to the scrolling
+ * log edit control. PostMessageW is non-blocking, so background threads
+ * are never stalled waiting for the UI thread — eliminating the deadlock
+ * risk that existed with the previous SendMessageW approach.
+ *
+ * WndProc handles WM_APP_LOG and must call free() on lParam.
+ */
 void append_text_to_edit(const wchar_t* newText)
 {
+	if (!mainWindow || !newText) return;
+
+	// Heap-copy the string; WndProc owns it and will free() it.
+	wchar_t* copy = _wcsdup(newText);
+	if (!copy) return;		// out of memory — silently drop rather than crash
+
+	if (!PostMessageW(mainWindow, WM_APP_LOG, 0, (LPARAM)copy))
+	{
+		free(copy);			// PostMessageW failed (queue full / window gone)
+	}
+}
+void
+append_text_to_edit(char* buffer)
+{
 	if (!hEdit) return;
+	if (!buffer) return;
+	
+	size_t convertedChars = 0;
+	size_t maxSize = 2048;
+	wchar_t wcstring[2048];
+	errno_t err;
 
-	// Get current length
-	int len = GetWindowTextLengthW(hEdit);
-
-	// Allocate buffer for current + new text
-	std::wstring buffer;
-	buffer.resize(len);
-
-	if (len > 0)
-		GetWindowTextW(hEdit, &buffer[0], len + 1);
-
-	// Append new text (with newline)
-	buffer.append(newText);
-	buffer.append(L"\r\n");
-
-	// Set updated text
-	SetWindowTextW(hEdit, buffer.c_str());
-
-	// Scroll to bottom
-	SendMessageW(hEdit, EM_SETSEL, buffer.length(), buffer.length());
-	SendMessageW(hEdit, EM_SCROLLCARET, 0, 0);
+	err = mbstowcs_s(&convertedChars, wcstring, maxSize, buffer, _TRUNCATE);
+	if (!err)
+	{
+		append_text_to_edit(wcstring);
+	}
 }
 #endif
 /*
@@ -169,7 +190,6 @@ void log_message(const char* filename, const char* message)
 	char timeBuf[32];
 	size_t convertedChars = 0;
 	size_t origionalSize = strlen(message) + 1;
-	size_t maxSize = 512;
 	int sts;
 	
 	sts = WaitForSingleObject(log_sema, 1000 );
@@ -186,16 +206,15 @@ void log_message(const char* filename, const char* message)
 
 		if (err)
 		{
-			wchar_t tbuf[1024];
 			char pstr[1024];
 			string errstr = GetLastErrorAsString();
-			sprintf_s(pstr, sizeof(pstr), "fopen_s %s returns %d: %s\n", default_log_file, err, errstr.c_str());
-			mbstowcs_s(&convertedChars,
-				tbuf,
-				1024,
-				(const char *)pstr,
-				1024 );
-			MessageBoxW(NULL, tbuf, tbuf, MB_OK);
+			sprintf_s(pstr, sizeof(pstr), "log_message: fopen_s %s returns %d: %s",
+				default_log_file, err, errstr.c_str());
+#ifdef NDEBUG
+			append_text_to_edit(pstr);
+#else
+			wprintf(L"log_message: %hs\n", pstr);
+#endif
 		}
 		if (logfile)
 		{
@@ -204,46 +223,21 @@ void log_message(const char* filename, const char* message)
 			fclose(logfile);
 		}
 		
-		wchar_t wcstring[512+4];
+		wchar_t wcstring[LOG_BUF_SIZE];
 		//lpMessage = message;
-		err = mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
-		  
-        errno_t err = wcscat_s(wcstring, 516, L"\n");  
-        if (err != 0) {  
-           // Handle the error appropriately, e.g., log or display an error message  
-           wprintf(L"Error concatenating strings: %d\n", err);  
-        }
-		//printf("%s\n", message);
-		//OutputDebugStringA(lpMessage);
-		//MessageBox(0, wcstring, L"", MB_ICONSTOP | MB_OK);
-		//SetWindowText(hEdit, wcstring);
-#ifdef NDEBUG
 
-		append_text_to_edit(wcstring);
-
-		HFONT hFont, hOldFont;
-		extern HWND mainWindow;
-		HDC hdc;
-		PAINTSTRUCT ps;
-
-		hdc = BeginPaint(mainWindow, &ps);
-
-		// Retrieve a handle to the variable stock font.  
-		hFont = (HFONT)GetStockObject(ANSI_VAR_FONT);
-
-		// Select the variable stock font into the specified device context. 
-		if (hOldFont = (HFONT)SelectObject(hdc, hFont))
-		{
-			// Display the text string.
-			mbstowcs_s(&convertedChars, wcstring, origionalSize, message, maxSize);
-			TextOutW(hdc, 5, 40, wcstring, (int)convertedChars);
-
-			// Restore the original font.        
-			SelectObject(hdc, hOldFont);
-		}
-		EndPaint(mainWindow, &ps);
-#endif
+		err = mbstowcs_s(&convertedChars, wcstring, _countof(wcstring), message, _TRUNCATE);
 		ReleaseMutex(log_sema);
+		if (err != 0 && err != STRUNCATE)
+		{
+			// Conversion failed outright — do not forward garbage to the log window
+			wprintf(L"log_message: mbstowcs_s failed (%d)\n", err);
+			return;
+		}
+#ifdef NDEBUG
+		append_text_to_edit(wcstring);
+#endif
+		
 	}
 }
 
@@ -278,26 +272,7 @@ do_command_read(const char* cmd_str, char* buffer, int max_len)
 		cp = fgets(buffer, max_len, fp);
 		if (cp != NULL)
 		{
-			{
-				FILE* fp;
-				char* cp;
-
-				fp = _popen(cmd_str, "r");
-				if (fp == NULL)
-				{
-					cp = NULL;
-				}
-				else
-				{
-					cp = fgets(buffer, max_len, fp);
-					if (cp != NULL)
-					{
-						(void)strtok_s(buffer, "\n", &token1); // Strip the newline
-					}
-					_pclose(fp);
-				}
-				return (cp);
-			}(buffer, "\n"); // Strip the newline
+			(void)strtok_s(buffer, "\n", &token1); // Strip the newline
 		}
 		_pclose(fp);
 	}
@@ -444,20 +419,14 @@ cleanString(char* strIn)
 int
 takeInstructorLock()
 {
-	int trycount = 0;
 	int sts;
 
-	while (trycount < 5)
+	sts = WaitForSingleObject(simmgr_shm->instructor.sema, 1000);
+	if(sts == WAIT_OBJECT_0)
 	{
-		sts = WaitForSingleObject(simmgr_shm->instructor.sema, INFINITE);
-		switch (sts)
-		{
-		case WAIT_OBJECT_0:
-			return (0);
-		case WAIT_ABANDONED:
-			return (-1);
-		}
+		return (0);
 	}
+	printf("WaitForSingleObject failed: %d\n", GetLastError());
 	return (-1);
 }
 
@@ -553,17 +522,6 @@ lockAndComment(char* str)
 	}
 }
 
-void
-forceInstructorLock(void)
-{
-	while (takeInstructorLock())
-	{
-		// Force Release until we can take the lock
-		releaseInstructorLock();
-	}
-	releaseInstructorLock();
-}
-
 void showLastError(LPTSTR lpszFunction)
 {
 	// Retrieve the system error message for the last-error code
@@ -590,7 +548,7 @@ void showLastError(LPTSTR lpszFunction)
 		StringCchPrintf((LPTSTR)lpDisplayBuf,
 			LocalSize(lpDisplayBuf) / sizeof(TCHAR),
 			TEXT("%s failed with error %d: %s"),
-			lpszFunction, dw, lpp_msg );
+			lpszFunction, dw, (LPTSTR)&lpp_msg );
 		MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
 		LocalFree(lpDisplayBuf);
 	}

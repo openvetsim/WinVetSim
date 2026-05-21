@@ -1,9 +1,19 @@
 #pragma once
 
+// Custom window message: background threads post this to deliver a log line
+// to the UI thread asynchronously. lParam is a wchar_t* allocated with _wcsdup();
+// WndProc must call free() on lParam after processing.
+#define WM_APP_LOG            (WM_APP + 1)
+
+// Scrolling log window line-count limits
+#define LOG_WINDOW_MAX_LINES  500
+#define LOG_WINDOW_TRIM_LINES 100
+
 #define STR_SIZE			64
 #define LONG_STR_SIZE		128
 #define FILENAME_SIZE		256
 #define COMMENT_SIZE		1024
+#define LOG_BUF_SIZE		512
 #define LOG_TO_FILE			0
 #define MSG_LENGTH	2048
 

@@ -47,7 +47,32 @@ int isServerRunning(void)
 void
 stopPHPServer(void)
 {
-	system("taskkill /FI \"WINDOWTITLE eq WinVetSim PHP\"");
+	char cmd[200]  = "taskkill /FI \"WINDOWTITLE eq WinVetSim PHP\"";
+	char mbuf[300];
+
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+	BOOL created = CreateProcessA(NULL, cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+	if (!created)
+	{
+		DWORD error = GetLastError();
+
+		// Log the command line that was attempted
+		log_message("", cmd);
+
+		sprintf_s(mbuf, 300, "CreateProcess failed with error %lu: %s", error, std::system_category().message(error).c_str());
+		printf("%s\n", mbuf);
+		log_message("", mbuf);
+	}
+	else
+	{
+		// We don't need the handles; close them.
+		CloseHandle(pi.hProcess);
+		CloseHandle(pi.hThread);
+	}
 }
 
 char phpPath[FILENAME_MAX];
@@ -189,7 +214,7 @@ int startPHPServer(void )
 	int rval = -1;
 	int checkCount;
 	char mbuf[300];
-
+	
 	if (isServerRunning() == 0)
 	{
 		if (findPhpPath() == 0)
@@ -203,12 +228,50 @@ int startPHPServer(void )
 
 		// start [<title>] //d <path>] [program [<parameter>...]]
 		sprintf_s(commandLine, 2048, 
-			"start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
-			localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
-		sprintf_s(mbuf, 300, "starting PHP: %s", commandLine);
+			//"cmd /c start \"WinVetSim PHP\" /d  \"%s\" /min \"%s/php.exe\" -S %s:%d sim-ii/router.php",
+			//localConfig.html_path, phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
+			"\"%s/php.exe\" -S %s:%d sim-ii/router.php",
+			phpPath, PHP_SERVER_ADDR, PHP_SERVER_PORT );
+		STARTUPINFOA si;
+		PROCESS_INFORMATION pi;
+		ZeroMemory(&si, sizeof(si));
+		si.cb = sizeof(si);
+		ZeroMemory(&pi, sizeof(pi));
+		BOOL created;
+		DWORD fAtr;
+		if ( ( strlen(localConfig.html_path) != 0 ) && (fAtr = GetFileAttributesA(localConfig.html_path) ) & FILE_ATTRIBUTE_DIRECTORY )
+		{
+			// Good path. At least its a directory
+			sprintf_s(mbuf, 300, "starting PHP: %s in directory %s", commandLine, localConfig.html_path);
+			created = CreateProcessA(NULL, commandLine, NULL, NULL, FALSE, 0, NULL, localConfig.html_path, &si, &pi);
+		}
+		else
+		{
+			// Unknown HTML path. Start in current directory
+			sprintf_s(mbuf, 300, "starting PHP: %s in current directory", commandLine );
+			created = CreateProcessA(NULL, commandLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi);
+		}
 		log_message("", mbuf);
-		system(commandLine);
-		
+		if (!created)
+		{
+			DWORD error = GetLastError();
+
+			// Log the command line that was attempted
+			log_message("", commandLine);
+
+			sprintf_s(mbuf, 300, "CreateProcess failed with error %lu: %s", error, std::system_category().message(error).c_str());
+			printf("%s\n", mbuf);
+			log_message("", mbuf);
+		}
+		else
+		{
+			// We don't need the handles; close them.
+			CloseHandle(pi.hProcess);
+			CloseHandle(pi.hThread);
+		}
+		sprintf_s(mbuf, 300, "CreateProcess PHP %s", "Started OK");
+		log_message("", mbuf);
+		//
 		for ( checkCount = 100 ; checkCount > 0; checkCount-- )
 		{
 			Sleep(10);
@@ -294,7 +357,7 @@ checkURL(string host, string port, string page)
 				sts = send(Socket, get_http.c_str(),(int) strlen(get_http.c_str()), 0);
 				//cout << "send returns " << sts << endl;
 				// recieve html
-				
+				i = 0;
 				while ((nDataLength = recv(Socket, buffer, 10000, 0)) > 0) {
 					//cout << "recv returns " << nDataLength << endl;
 					
@@ -318,7 +381,6 @@ checkURL(string host, string port, string page)
 			//cout << "socket fails" << endl;
 			i = 0;
 		}
-
 		closesocket(Socket);
 	}
 	freeaddrinfo(result);
