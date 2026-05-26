@@ -439,28 +439,17 @@ scenario_main(void)
 	if (!current_scene)
 	{
 		snprintf(s_msg, MAX_MSG_SIZE, "Scenario: Starting scene not found in XML file");
-		printf("Scenario: Starting scene not found in XML file\n");
+		log_message("", s_msg);
 		current_scene_id = -1;
-		if (!checkOnly)
+
+		sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s", "No Start Scene");
+		sts = takeInstructorLock();
+		if (sts == 0)
 		{
-			lockAndComment(s_msg);
-		}
-		if (verbose)
-		{
-			fprintf(stderr, "%s\n", s_msg);
-		}
-		if (!checkOnly)
-		{
-			printf("No Start Scene\n");
-			sprintf_s(simmgr_shm->status.scenario.scene_name, STR_SIZE, "%s", "No Start Scene");
-			sts = takeInstructorLock();
-			if (sts == 0)
-			{
-				sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
-				sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s", "No Start Scene");
-				simmgr_shm->instructor.scenario.error_flag = 1;
-				releaseInstructorLock();
-			}
+			sprintf_s(simmgr_shm->instructor.scenario.state, STR_SIZE, "%s", "terminate");
+			sprintf_s(simmgr_shm->instructor.scenario.error_message, LONG_STR_SIZE, "%s", "No Start Scene");
+			simmgr_shm->instructor.scenario.error_flag = 1;
+			releaseInstructorLock();
 		}
 		parseLog.append(L"Starting scene not found in XML file\n"); 
 		errCount++;
@@ -1157,11 +1146,12 @@ startScene(int sceneId)
 	int sts;
 
 	new_scene = findScene(sceneId);
-	if (!new_scene)
+	if (new_scene == NULL )
 	{
 		fprintf(stderr, "Scene %d not found", sceneId);
 		printf("Scene %d not found", sceneId);
 		snprintf(s_msg, MAX_MSG_SIZE, "Scenario: Scene %d not found. Terminating.", sceneId);
+		log_message("", s_msg);
 		snprintf(simmgr_shm->status.scenario.error_message, LONG_STR_SIZE, "Scenario: Scene %d not found. Terminating.", sceneId);
 		sts = takeInstructorLock();
 		if (sts == 0)
@@ -1172,6 +1162,11 @@ startScene(int sceneId)
 			releaseInstructorLock();
 		}
 		return;
+	}
+	else
+	{
+		snprintf(s_msg, MAX_MSG_SIZE, "Scenario: Scene %d found. Terminating.", sceneId);
+		log_message("", s_msg);
 	}
 	showScene(new_scene);
 	current_scene = new_scene;

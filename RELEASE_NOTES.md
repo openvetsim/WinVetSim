@@ -125,3 +125,72 @@ Both overloads of `append_text_to_edit` (`const wchar_t*` and `char*`) are now d
 | `llist.cpp` | Updated (see diff) |
 | `WinVetSim.vcxproj` / `.filters` | Project file updates |
 | `args/args.vcxproj` | Project file updates |
+
+---
+
+## Version 2.4 — Changes from Version 2.3
+
+**Base commit:** bdab196 — Release Version 2.3  
+**Release commit:** e4e5ad6 — Release Version 2.4 (2025-11-07)  
+**Changed files:** 8 (2 commits)
+
+---
+
+## New Features
+
+### Controller Firmware Version via HTTP (`pulse.cpp`)
+
+`getControllerVersion()` has been completely rewritten. The previous implementation opened a raw TCP socket and sent a literal `"version"` string, which no longer matched the controller protocol.
+
+The new implementation fetches the controller's status page over HTTP using **libcurl** and parses the response with **nlohmann/json v3.12.0**:
+
+- A `WriteCallback` / `ReadWebPage()` helper issues a `GET` request to `http://{ip}/cgi-bin/ctlstatus.cgi`.
+- The response body is parsed for the `simCtlVersion` field using three progressive fallback strategies:
+  1. **Full JSON parse** (`try_parse_full_json_for_simCtlVersion`) — succeeds when the CGI returns a clean JSON object.
+  2. **Mixed-text extraction** (`extract_simCtlVersion_from_mixed_text`) — scans the raw body for the `simCtlVersion` key when HTML wrapper content surrounds the JSON.
+  3. **Plain-string search** (`extract_simCtlVersion`) — last-resort substring scan for the version value.
+- The extracted version string is stored in `simControllers.version`.
+
+### `simControllers.version` Buffer Expanded (`vetsim.h`)
+
+The `version` field in the `simControllers` structure has been widened from `char[32]` to `char[256]` to accommodate full firmware version strings returned by the HTTP endpoint.
+
+---
+
+## Changes
+
+### Controller Version Display Temporarily Disabled (`simstatus.cpp`)
+
+The block in `sendStatus()` that appended the controller version to the status reply has been commented out. This prevents stale or empty version data from appearing in status responses while the new HTTP-based fetch path is stabilised.
+
+---
+
+## Dependencies
+
+### nlohmann/json v3.12.0 Added (`packages.config`)
+
+A new `packages.config` file has been added to the project, declaring the **nlohmann.json 3.12.0** NuGet package. This provides the header-only JSON library used by the rewritten `getControllerVersion()` in `pulse.cpp`.
+
+---
+
+## Refactoring / Code Quality
+
+### Unused Variable Removed (`main.cpp`)
+
+An unused `errno_t sts` local variable in `getBuildDate()` has been removed. It was declared but never read, producing a compiler warning.
+
+---
+
+## Files Changed
+
+| File | Nature of Change |
+|---|---|
+| `pulse.cpp` | `getControllerVersion()` rewritten; libcurl HTTP fetch; nlohmann/json parsing; three-strategy version extraction |
+| `vetsim.h` | `simControllers.version` expanded from `char[32]` to `char[256]` |
+| `simstatus.cpp` | Controller version display in `sendStatus()` commented out |
+| `version.h` | `SIMMGR_VERSION_MIN` bumped from 3 to 4 |
+| `packages.config` | New file; declares nlohmann.json v3.12.0 NuGet dependency |
+| `main.cpp` | Unused `errno_t sts` removed from `getBuildDate()` |
+| `WinVetSim.vcxproj` | Project file updated for new NuGet dependency and build settings |
+| `WinVetSim.vcxproj.filters` | Filter file updated |
+
