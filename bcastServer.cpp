@@ -75,7 +75,7 @@ int bcastReply(void)
 
 				do
 				{
-					std::cout << "\nWaiting for message...\n";
+					//std::cout << "\nWaiting for message...\n";
 					memset(recvbuff, 0, sizeof(recvbuff));
 					auto sts = recvfrom(sock, recvbuff, recvbufflen, 0, (sockaddr*)&Sender_addr, &len);
 					if (sts != SOCKET_ERROR)

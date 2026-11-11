@@ -22,8 +22,13 @@
 
 #include "vetsimTasks.h"
 #include <thread>
+#include <ostream>
+#include <mutex>
 
 using namespace std;
+
+// Serializes the "Task Started" messages so concurrent start_task calls don't interleave on cout.
+static std::mutex startTaskOutputLock;
 
 // Start a task to run once. Might run forever.
 std::thread::id start_task(const char* name, std::function<void(void)> func)
@@ -31,9 +36,12 @@ std::thread::id start_task(const char* name, std::function<void(void)> func)
 	std::thread::id id;
 
 	std::thread proc = std::thread([func]() {	func(); });
+	id = proc.get_id();		// Must be read before detach(); afterwards it is always empty.
 	proc.detach();
-	id = proc.get_id();
-	cout << "Task Started: " << name << " " << id << endl;
+	{
+		std::lock_guard<std::mutex> guard(startTaskOutputLock);
+		cout << "Task Started: " << name << " " << id << endl;
+	}
 	return (id);
 }
 
