@@ -463,14 +463,16 @@ void ErrorExit(LPCTSTR lpszFunction)
 
 	lpDisplayBuf = (LPVOID)LocalAlloc(LMEM_ZEROINIT,
 		(lstrlen((LPCTSTR)lpMsgBuf) + lstrlen((LPCTSTR)lpszFunction) + 40) * sizeof(TCHAR));
-	StringCchPrintf((LPTSTR)lpDisplayBuf,
-		LocalSize(lpDisplayBuf) / sizeof(TCHAR),
-		TEXT("%s failed with error %d: %s"),
-		lpszFunction, dw, lpMsgBuf);
-	MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
-
-	if ( lpMsgBuf != NULL ) LocalFree(lpMsgBuf);
-	if ( lpDisplayBuf != NULL )	LocalFree(lpDisplayBuf);
+	if (lpDisplayBuf)
+	{
+		StringCchPrintf((LPTSTR)lpDisplayBuf,
+			LocalSize(lpDisplayBuf) / sizeof(TCHAR),
+			TEXT("%s failed with error %d: %s"),
+			lpszFunction, dw, lpMsgBuf);
+		MessageBox(NULL, (LPCTSTR)lpDisplayBuf, TEXT("Error"), MB_OK);
+	}
+	if ( lpMsgBuf != 0 ) LocalFree(lpMsgBuf);
+	if ( lpDisplayBuf != 0 )	LocalFree(lpDisplayBuf);
 	ExitProcess(dw);
 	/*
 	argv = CommandLineToArgvW(GetCommandLine(), &argc);
