@@ -157,20 +157,20 @@ int vetsim()
 
 	if (startPHPServer())
 	{
-		printf("Could not start PHP Server\n" );
 		sprintf_s(msg_buf, BUF_SIZE, "%s", "Could not start PHP Server");
 		log_message("", msg_buf);
 		exit(202);
 	}
 	else
 	{
-		printf("PHP Server OK! %s\n", phpPath);
-		sprintf_s(msg_buf, BUF_SIZE, "%s", "PHP Server OK!!");
+		sprintf_s(msg_buf, BUF_SIZE, "PHP Server OK %s", phpPath);
 		log_message("", msg_buf);
 	}
 
 	// Open web page
 	sprintf_s(cmd, BUF_SIZE, "cmd /c start http://%s:%d/sim-ii", PHP_SERVER_ADDR, PHP_SERVER_PORT );
+	sprintf_s(msg_buf, BUF_SIZE, "start sim-ii  %s", cmd);
+	log_message("", msg_buf);
 	STARTUPINFOA si;
 	PROCESS_INFORMATION pi;
 	ZeroMemory(&si, sizeof(si));
@@ -181,16 +181,16 @@ int vetsim()
 	{
 		DWORD error = GetLastError();
 
-		// Log the command line that was attempted
-		log_message("", cmd);
-
 		sprintf_s(msg_buf, BUF_SIZE, "CreateProcess failed with error %lu: %s", error, std::system_category().message(error).c_str());
-		printf("%s\n", msg_buf);
 		log_message("", msg_buf);
 	}
 	else
 	{
+		sprintf_s(msg_buf, BUF_SIZE, "CreateProcess OK" );
+		log_message("", msg_buf);
+
 		// We don't need the handles; close them.
+		printf("%s\n", msg_buf);
 		CloseHandle(pi.hProcess);
 		CloseHandle(pi.hThread);
 	}

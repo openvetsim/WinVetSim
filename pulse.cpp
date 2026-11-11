@@ -112,6 +112,15 @@ struct listener
 
 struct listener listeners[MAX_LISTENERS];
 
+// Protects listeners[] — the accept loop (pulseTask) and the broadcast loop both use it.
+std::mutex listenersLock;
+
+// A send() that blocks longer than this is abandoned, so one stalled controller
+// cannot hold up pulses to the others.
+#define SEND_TIMEOUT_MSEC	500
+// Log any send() that takes longer than this.
+#define SEND_SLOW_MSEC		100
+
 char pulseWord[] = "pulse\n";
 char pulseWordVPC[] = "pulseVPC\n";
 char breathWord[] = "breath\n";
@@ -344,27 +353,25 @@ void
 resetTimer(int rate, int isCardiac, int isFib)
 {
 	ULONGLONG wait_time_msec;
-	ULONGLONG remaining;
-	ULONGLONG now = simmgr_shm->server.msec_time;
+	ULONGLONG now = GetTickCount64();
 
 	wait_time_msec = getWaitTimeMsec(rate, isCardiac, isFib);
 
 	//printf("Set Timer: Rate %d sec_per_beat %f %llu\n", rate, sec_per_beat, wait_time_msec);
+	// If the next event is already due, or is further away than one new interval,
+	// reschedule it one new interval from now. Otherwise leave it where it is.
 	if (isCardiac)
 	{
 		pulseInterval = wait_time_msec;
-		remaining = nextPulseTime - now;
-		if (remaining > (now + pulseInterval))
+		if ((nextPulseTime <= now) || ((nextPulseTime - now) > wait_time_msec))
 		{
 			nextPulseTime = now + wait_time_msec;
 		}
-		
 	}
 	else
 	{
 		breathInterval = wait_time_msec;
-		remaining = nextBreathTime - now;
-		if (remaining > (now + pulseInterval))
+		if ((nextBreathTime <= now) || ((nextBreathTime - now) > wait_time_msec))
 		{
 			nextBreathTime = now + wait_time_msec;
 		}
@@ -409,7 +416,7 @@ set_pulse_rate(int bpm)
 void
 restart_breath_timer(void)
 {
-	ULONGLONG now = simmgr_shm->server.msec_time;
+	ULONGLONG now = GetTickCount64();
 	ULONGLONG wait_time_msec;
 
 	wait_time_msec = getWaitTimeMsec(simmgr_shm->status.respiration.rate, 0, 0);
@@ -556,8 +563,16 @@ pulseTask(void )
 	while (1)
 	{
 		cfd = accept(sfd, (struct sockaddr*)&client_addr, &socklen);
-		if (cfd >= 0)
+		if (cfd != INVALID_SOCKET)
 		{
+			// Send small sync messages immediately (no Nagle batching), and never block
+			// the broadcast loop for long on a stalled connection.
+			int noDelay = 1;
+			setsockopt(cfd, IPPROTO_TCP, TCP_NODELAY, (const char*)&noDelay, sizeof(noDelay));
+			DWORD sendTimeout = SEND_TIMEOUT_MSEC;
+			setsockopt(cfd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&sendTimeout, sizeof(sendTimeout));
+			int newIndex = -1;
+
 			char newIpAddr[STR_SIZE];
 			sprintf_s(newIpAddr, STR_SIZE, "%d.%d.%d.%d",
 				client_addr.sa_data[2] & 0xff,
@@ -593,56 +608,56 @@ pulseTask(void )
 			printf("Send Status Port complete\n");
 			found = 1;
 #else
-			// Check for reopen from an existing controller
-			found = 0;
-			for (i = 0; i < MAX_LISTENERS; i++)
 			{
-				if (listeners[i].allocated == 1 && strcmp(newIpAddr, simmgr_shm->simControllers[i].ipAddr) == 0)
-				{
-					closesocket(listeners[i].cfd);
-					listeners[i].cfd = cfd;
-					found = 1;
-					printf("ReOpened: %s\n", newIpAddr);
-					// Send the Status Port Number to the listener
-					sendStatusPort(i);
+				// Hold the lock so the broadcast loop never sends on a socket being closed here.
+				std::lock_guard<std::mutex> guard(listenersLock);
 
-					break;
-				}
-			}
-			if (found == 0)
-			{
-				for (i = 0; i < MAX_LISTENERS && found == 0 ; i++  )
+				// Check for reopen from an existing controller
+				found = 0;
+				for (i = 0; i < MAX_LISTENERS; i++)
 				{
-					if (listeners[i].allocated == 0)
+					if (listeners[i].allocated == 1 && strcmp(newIpAddr, simmgr_shm->simControllers[i].ipAddr) == 0)
 					{
-						listeners[i].allocated = 1;
+						closesocket(listeners[i].cfd);
 						listeners[i].cfd = cfd;
-						listeners[i].thread_no = i;
-						simmgr_shm->simControllers[i].allocated = 1;
-						sprintf_s(simmgr_shm->simControllers[i].ipAddr, STR_SIZE, "%d.%d.%d.%d",
-							client_addr.sa_data[2] & 0xff,
-							client_addr.sa_data[3] & 0xff,
-							client_addr.sa_data[4] & 0xff,
-							client_addr.sa_data[5] & 0xff
-						);
-						printf("%d.%d.%d.%d\n",
-							client_addr.sa_data[2] & 0xff,
-							client_addr.sa_data[3] & 0xff,
-							client_addr.sa_data[4] & 0xff,
-							client_addr.sa_data[5] & 0xff
-						);
+						found = 1;
+						printf("ReOpened: %s\n", newIpAddr);
 						// Send the Status Port Number to the listener
 						sendStatusPort(i);
-						getControllerVersion(i);
-						
-						found = 1;
+
+						break;
 					}
 				}
+				if (found == 0)
+				{
+					for (i = 0; i < MAX_LISTENERS && found == 0; i++)
+					{
+						if (listeners[i].allocated == 0)
+						{
+							listeners[i].allocated = 1;
+							listeners[i].cfd = cfd;
+							listeners[i].thread_no = i;
+							simmgr_shm->simControllers[i].allocated = 1;
+							sprintf_s(simmgr_shm->simControllers[i].ipAddr, STR_SIZE, "%s", newIpAddr);
+							printf("%s\n", newIpAddr);
+							// Send the Status Port Number to the listener
+							sendStatusPort(i);
+
+							newIndex = i;
+							found = 1;
+						}
+					}
+				}
+				if (found == 0)
+				{
+					// Unable to allocate
+					closesocket(cfd);
+				}
 			}
-			if (found == 0)
+			// The HTTP version query can take seconds; do it outside the lock.
+			if (newIndex >= 0)
 			{
-				// Unable to allocate
-				closesocket(cfd);
+				getControllerVersion(newIndex);
 			}
 #endif
 		}
@@ -663,6 +678,9 @@ pulseTask(void )
  *
  * DESCRIPTION:
  *		Send the port number to the indicated listener.
+ *
+ * ASSUMPTIONS:
+ *		Called with listenersLock held
 */
 void
 sendStatusPort(int listener)
@@ -671,13 +689,17 @@ sendStatusPort(int listener)
 	int len;
 	char pbuf[64];
 
-	sprintf_s(pbuf, "statusPort:%d", PORT_STATUS);
+	// Newline-terminated like the other messages, so it does not run into the next "pulse\n".
+	sprintf_s(pbuf, "statusPort:%d\n", PORT_STATUS);
 	len = (int)strlen(pbuf);
 
 	if (listeners[listener].allocated == 1)
 	{
 		fd = listeners[listener].cfd;
-		len = send(fd, pbuf, len, 0);
+		if (send(fd, pbuf, len, 0) == SOCKET_ERROR)
+		{
+			printf("sendStatusPort: send to listener %d failed (%d)\n", listener, WSAGetLastError());
+		}
 	}
 }
 
@@ -699,23 +721,35 @@ broadcast_word(char* word)
 {
 	int count = 0;
 	SOCKET fd;
-	size_t len;
+	int len;
+	int sts;
 	int i;
+	ULONGLONG start;
+	ULONGLONG elapsed;
 
+	std::lock_guard<std::mutex> guard(listenersLock);
+
+	len = (int)strlen(word);
 	for (i = 0; i < MAX_LISTENERS; i++)
 	{
 		if (listeners[i].allocated == 1)
 		{
 			fd = listeners[i].cfd;
-			len = strlen(word);
-			//printf("Send %s (%d) to %d - ", word, len, i);
-			len = send(fd, word, (int)len, 0);
-			//printf("%d\n", len);
-			if (len < 0) // This detects closed or disconnected listeners.
+			start = GetTickCount64();
+			sts = send(fd, word, len, 0);
+			elapsed = GetTickCount64() - start;
+			if (elapsed > SEND_SLOW_MSEC)
 			{
-				printf("Close listener %d\n", i);
+				printf("broadcast_word: send to listener %d (%s) took %llu msec\n",
+					i, simmgr_shm->simControllers[i].ipAddr, elapsed);
+			}
+			if (sts == SOCKET_ERROR) // This detects closed, disconnected or stalled listeners.
+			{
+				int err = WSAGetLastError();
+				printf("Close listener %d (%s): send error %d\n", i, simmgr_shm->simControllers[i].ipAddr, err);
 				closesocket(fd);
 				listeners[i].allocated = 0;
+				simmgr_shm->simControllers[i].allocated = 0;
 			}
 			else
 			{
@@ -753,32 +787,52 @@ pulseTimer(void)
 	dwThreadPri = GetThreadPriority(GetCurrentThread());
 	_tprintf(TEXT("pulseTimer: Current thread priority is 0x%x\n"), dwThreadPri);
 
+	// rand() state is per-thread in the MSVC CRT; seed this thread (used for AFib timing).
+	srand((unsigned)time(NULL) ^ GetCurrentThreadId());
+
 	ULONGLONG now;
-	ULONGLONG now2;
+	int pulseDue;
+	int breathDue;
 	while (1)
 	{
 		Sleep(1);
-		now = simmgr_shm->server.msec_time;
-		if (nextPulseTime <= now)
+		// Read the clock directly. simmgr_shm->server.msec_time is only refreshed by
+		// other threads, so if they are delayed the beats would stop.
+		now = GetTickCount64();
+
+		pulseSema.lock();
+		pulseDue = (nextPulseTime <= now);
+		pulseSema.unlock();
+		if (pulseDue)
 		{
-			pulse_beat_handler();
+			pulse_beat_handler();	// Takes pulseSema itself
+			pulseSema.lock();
 			nextPulseTime += pulseInterval;
-			now2 = simmgr_shm->server.msec_time;
-			if (nextPulseTime <= (now2+1))
+			now = GetTickCount64();
+			if (nextPulseTime <= now)
 			{
-				nextPulseTime = now2;
+				// Fell behind (thread was delayed). Resume one interval from now
+				// rather than firing a burst of catch-up beats.
+				nextPulseTime = now + pulseInterval;
 			}
+			pulseSema.unlock();
 		}
-		now = simmgr_shm->server.msec_time;
-		if (nextBreathTime <= now)
+
+		now = GetTickCount64();
+		breathSema.lock();
+		breathDue = (nextBreathTime <= now);
+		breathSema.unlock();
+		if (breathDue)
 		{
-			breath_beat_handler();
+			breath_beat_handler();	// Takes breathSema itself
+			breathSema.lock();
 			nextBreathTime += breathInterval;
-			now2 = simmgr_shm->server.msec_time;
-			if (nextBreathTime <= (now2+1))
+			now = GetTickCount64();
+			if (nextBreathTime <= now)
 			{
-				nextBreathTime = now2 + breathInterval;
+				nextBreathTime = now + breathInterval;
 			}
+			breathSema.unlock();
 		}
 	}
 	printf("pulseTimer Exit\n");
@@ -805,19 +859,52 @@ pulseBroadcastLoop(void)
 	unsigned int last_breath = simmgr_shm->status.respiration.breathCount;
 	unsigned int last_manual_breath = simmgr_shm->status.respiration.manual_count;
 
+	// Stall detection: report when no pulse has been seen for well over one beat interval.
+	ULONGLONG now;
+	ULONGLONG lastPulseTime = GetTickCount64();
+	ULONGLONG expectedMsec;
+	ULONGLONG gap;
+	int stallReported = 0;
+	int rate;
+
 	while (1)
 	{
 		Sleep(10);
-		
+		now = GetTickCount64();
+
 		if (portUpdateLoops++ > 500)
 		{
-			sprintf_s(pbuf, "statusPort:%d", PORT_STATUS);
+			sprintf_s(pbuf, "statusPort:%d\n", PORT_STATUS);
 			broadcast_word(pbuf);
 			portUpdateLoops = 0;
 		}
-		
+
+		rate = currentPulseRate;
+		if (rate > 0 && simmgr_shm->status.cpr.running == 0)
+		{
+			expectedMsec = 60000 / rate;
+			gap = now - lastPulseTime;
+			// AFib/VPC beats can be up to ~2x the normal interval, so allow 2x plus margin.
+			if (!stallReported && gap > (expectedMsec * 2) + 1000)
+			{
+				printf("pulseBroadcastLoop: STALL - no pulse for %llu msec (rate %d, expected %llu msec). "
+					"pulseTimer has stopped producing beats.\n", gap, rate, expectedMsec);
+				stallReported = 1;
+			}
+		}
+		else
+		{
+			lastPulseTime = now;
+		}
+
 		if (last_pulse != simmgr_shm->status.cardiac.pulseCount)
 		{
+			if (stallReported)
+			{
+				printf("pulseBroadcastLoop: pulses resumed after %llu msec\n", now - lastPulseTime);
+				stallReported = 0;
+			}
+			lastPulseTime = now;
 			last_pulse = simmgr_shm->status.cardiac.pulseCount;
 			count = broadcast_word(pulseWord);
 			if (count)
@@ -829,6 +916,7 @@ pulseBroadcastLoop(void)
 		}
 		if (last_pulseVpc != simmgr_shm->status.cardiac.pulseCountVpc)
 		{
+			lastPulseTime = now;
 			last_pulseVpc = simmgr_shm->status.cardiac.pulseCountVpc;
 			count = broadcast_word(pulseWordVPC);
 			if (count)
@@ -868,6 +956,9 @@ pulseProcessChild(void)
 {
 	int checkCount = 0;
 
+	// rand() state is per-thread in the MSVC CRT; seed this thread (used for the VPC array).
+	srand((unsigned)time(NULL) ^ GetCurrentThreadId());
+
 	while (1)
 	{
 		Sleep(50);		// 50 msec wait
@@ -895,24 +986,23 @@ pulseProcessChild(void)
 		if (currentVpcFreq != simmgr_shm->status.cardiac.vpc_freq ||
 				vpcType != simmgr_shm->status.cardiac.vpc_type)
 		{
+			pulseSema.lock();
 			currentVpcFreq = simmgr_shm->status.cardiac.vpc_freq;
 			vpcType = simmgr_shm->status.cardiac.vpc_type;
 			calculateVPCFreq();
 			set_pulse_rate(simmgr_shm->status.cardiac.rate);
-
+			pulseSema.unlock();
 		}
 
-		if (strncmp(simmgr_shm->status.cardiac.rhythm, "afib", 4) == 0 &&
-			! afibActive )
+		// Switch AFib on or off only when the rhythm actually changes. (Previously the
+		// else-branch turned AFib off on every other pass, toggling it every 50 msec.)
+		int isAfib = (strncmp(simmgr_shm->status.cardiac.rhythm, "afib", 4) == 0);
+		if (isAfib != afibActive)
 		{
-			afibActive = 1;
+			pulseSema.lock();
+			afibActive = isAfib;
 			set_pulse_rate(simmgr_shm->status.cardiac.rate);
-		}
-		else if (afibActive )
-		{
-			afibActive = 0;
-			set_pulse_rate(simmgr_shm->status.cardiac.rate);
-
+			pulseSema.unlock();
 		}
 		
 		if (lastManualBreath != simmgr_shm->status.respiration.manual_count)
@@ -953,7 +1043,7 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
 	size_t totalSize = size * nmemb;
 	std::string* str = (std::string*)userp;
 	str->append((char*)contents, totalSize);
-	std::cout << "ctlstatus.cgi returns " << size << std::endl << contents << std::endl;
+	std::cout << "ctlstatus.cgi returns " << totalSize << std::endl << std::string((char*)contents, totalSize) << std::endl;
 
 	return totalSize;
 }
@@ -970,6 +1060,9 @@ std::string ReadWebPage(const std::string& url)
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 		curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L); // Follow redirects
+		// Don't let an unresponsive controller hang the connection-accept thread.
+		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 2000L);
+		curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, 4000L);
 
 		CURLcode res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);

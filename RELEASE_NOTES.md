@@ -1,4 +1,130 @@
 # WinVetSim Release Notes
+## Version 2.5 — Additional Changes (Uncommitted)
+
+**Base commit:** aef3230 — Added RELEASE NOTE for changes from 2.3 to 2.4 (2026-05-26)  
+**Changed files:** 6
+
+---
+
+## Bug Fixes
+
+### Pulse Broadcast Send Errors Now Detected (`pulse.cpp`)
+
+`broadcast_word()` stored the result of `send()` in a `size_t`. Because `size_t` is unsigned, the `len < 0` check could never be true. A failed send (`SOCKET_ERROR`) was never detected, so disconnected controllers were never closed and the "Close listener" message never appeared.
+
+- The result is now an `int` and is compared against `SOCKET_ERROR`.
+- A failed listener is closed and marked unallocated in both `listeners[]` and `simmgr_shm->simControllers[]`. The log shows the controller's IP and the `WSAGetLastError()` code.
+- Any `send()` that takes longer than 100 ms (`SEND_SLOW_MSEC`) is logged with the controller's IP.
+
+### Controller Sockets No Longer Block the Broadcast Loop (`pulse.cpp`)
+
+Each accepted controller socket is now configured with:
+
+- **`TCP_NODELAY`**: each `pulse`, `pulseVPC` and `breath` message is sent immediately instead of being held back by Nagle batching.
+- **`SO_SNDTIMEO` of 500 ms** (`SEND_TIMEOUT_MSEC`): one stalled controller can no longer block sync messages to every other controller. A send that times out closes that controller's connection, and the controller must reconnect.
+
+### Listener Table Access Synchronised (`pulse.cpp`)
+
+A new `listenersLock` mutex protects `listeners[]`. The accept loop in `pulseTask()` could previously call `closesocket()` on a controller socket while the broadcast thread was sending on it. Both now take the lock. `getControllerVersion()` runs outside the lock because its HTTP request can take several seconds.
+
+### `statusPort` Message Now Newline-Terminated (`pulse.cpp`)
+
+`sendStatusPort()` and the periodic broadcast in `pulseBroadcastLoop()` sent `statusPort:<port>` with no trailing newline, unlike every other sync message. The controller received it run together with the next message (for example `statusPort:50201pulse\n`), so that pulse could be lost. The message is now sent as `statusPort:<port>\n`.
+
+### Beat Timer No Longer Depends on Another Thread's Clock (`pulse.cpp`)
+
+`pulseTimer()`, `resetTimer()` and `restart_breath_timer()` read `simmgr_shm->server.msec_time`, which is only refreshed by `hrcheck_handler` and `hrLogBeat()` on other threads. If those were delayed, the timer stopped producing beats. These functions now call `GetTickCount64()` directly.
+
+### Beat Timer Catch-Up and Locking Fixed (`pulse.cpp`)
+
+- After a delay, `pulseTimer()` set `nextPulseTime = now`, which fired an extra beat immediately. Both pulse and breath now resume one interval from the current time.
+- `nextPulseTime` and `nextBreathTime` are now updated while holding `pulseSema` and `breathSema` respectively.
+- The `set_pulse_rate()` calls for VPC and AFib changes in `pulseProcessChild()` now hold `pulseSema`, as the function's documented assumptions require.
+
+### AFib Toggling Every 50 ms Fixed (`pulse.cpp`)
+
+In `pulseProcessChild()`, the `else if (afibActive)` branch turned AFib off on the pass after it was turned on, so with an AFib rhythm active the timer switched between the AFib and normal intervals every 50 ms. AFib is now switched only when the rhythm actually changes to or from `afib`.
+
+### `resetTimer()` Comparison Corrected (`pulse.cpp`)
+
+`resetTimer()` compared the time remaining until the next beat (`remaining`) with an absolute time (`now + pulseInterval`), so the comparison only held when the next beat was already overdue. The breath branch also used `pulseInterval` instead of `breathInterval`. The next event is now rescheduled when it is already due or is further away than one new interval.
+
+### Random Number Generators Seeded Per Thread (`pulse.cpp`)
+
+The MSVC CRT keeps separate `rand()` state for each thread. `srand()` was called only in `pulseTask()`, so the AFib timing in `pulseTimer()` and the VPC frequency array in `pulseProcessChild()` used the same unseeded sequence on every run. Both threads now seed their own generator.
+
+### Controller Version Query Timeouts Added (`pulse.cpp`)
+
+`ReadWebPage()` now sets libcurl timeouts of 2 seconds to connect and 4 seconds in total. Previously an unresponsive controller could hang the connection-accept thread indefinitely. `WriteCallback()` now prints the received text instead of the buffer's pointer address, and prints the correct byte count.
+
+### PHP Server Check Fixed (`WebSrv.cpp`)
+
+`checkURL()` now puts its socket in non-blocking mode and waits for the connection with `select()`, with a 3-second timeout. Two problems in this version of the code were fixed:
+
+- **Response read.** It called `recv()` once, immediately after `send()`. On a non-blocking socket this only succeeds if PHP has already replied, and `SO_RCVTIMEO` has no effect. The check usually failed, so `startPHPServer()` stopped and the browser never opened (seen consistently in Debug builds). The reply is now read in a loop that waits with `select()` and stops when PHP closes the connection, the buffer is full, or 3 seconds pass with no data.
+- **Connect error handling.** The `connect()` error code was read even when `connect()` succeeded, and the error returns skipped `closesocket()`, `freeaddrinfo()` and `WSACleanup()`. Errors are now checked only on `SOCKET_ERROR`, a refused connection is treated as a failure, and every path cleans up.
+
+### PHP Server Is Stopped by Process Handle (`WebSrv.cpp`)
+
+`stopPHPServer()` previously ran `taskkill /FI "WINDOWTITLE eq WinVetSim PHP"`. Since the PHP server is now started directly with `CreateProcessA()`, its window no longer has that title, so the filter matched nothing. The PHP process information is now kept in `PHP_pi`. A new `KillProcess()` function posts `WM_CLOSE` to the process's window (only if one is found), waits up to 3 seconds, then calls `TerminateProcess()` if the process is still running, and closes both handles.
+
+### Orphaned PHP Server Terminated at Startup (`WebSrv.cpp`)
+
+A PHP server left running by an earlier session (one that crashed, was stopped from the debugger, or stopped in the startup failure loop) kept port `PHP_SERVER_PORT`. The newly launched PHP could not bind to the port, and if the orphan had stopped answering, every server check failed and startup hung.
+
+A new `killOrphanedPHPServer()` function runs at the start of `startPHPServer()`:
+
+- It uses `GetExtendedTcpTable()` to find the processes listening on `PHP_SERVER_PORT`.
+- Each process whose image is `php.exe` is terminated, and the log records its path and PID.
+- A process on the port that is not `php.exe` is logged and left running.
+
+Only one WinVetSim can run at a time, so any PHP on the port is an orphan. WinVetSim therefore always launches its own PHP server and stops it on exit. The project now links `Iphlpapi.lib`.
+
+### `ErrorExit()` Allocation Check (`main.cpp`)
+
+`ErrorExit()` now checks that `LocalAlloc()` succeeded before formatting and displaying the error message.
+
+### `start_task()` Returns the Real Thread ID (`vetsimTasks.cpp`)
+
+`start_task()` called `get_id()` after `detach()`, which always returns an empty ID, so the logged and returned ID was meaningless. The ID is now read before the thread is detached.
+
+---
+
+## Changes
+
+### PHP Server Startup Sequence (`WebSrv.cpp`)
+
+- `startPHPServer()` first terminates any orphaned PHP server on the port (see above).
+- It then checks for an already-running server up to 4 times, 200 ms apart, before launching PHP. A non-PHP server that answers on the port is still used.
+- After launching PHP, it checks up to 10 times, 100 ms apart (previously 100 times, 10 ms apart).
+- If the server still does not respond, `startPHPServer()` logs `startPHPServer() Failed` and then **waits forever**. The browser is not opened in this state.
+
+### Diagnostic Logging Added
+
+- **`pulse.cpp`**: `pulseBroadcastLoop()` logs `STALL - no pulse for N msec` when no pulse or VPC beat has been seen for more than twice the expected beat interval plus 1 second (skipped while CPR is running). It logs `pulses resumed after N msec` when beats return.
+- **`WebSrv.cpp`**: `isServerRunning()`, `findPhpPath()`, `startPHPServer()` and every step of `checkURL()` now write to the log. `checkURL()` sets `debug = 1` on every call, so this logging is always enabled.
+- **`VetSim.cpp`**: startup logs the PHP path, the browser launch command, and `CreateProcess OK` when the browser is launched. Duplicate `printf` calls were removed in favour of `log_message()`.
+
+### Console Output
+
+- **`vetsimTasks.cpp`**: `start_task()` holds a mutex while it writes its "Task Started" message, so messages from concurrent calls no longer overlap.
+- **`bcastServer.cpp`**: the "Waiting for message..." console message, printed on every receive loop, has been commented out.
+
+---
+
+## Files Changed
+
+| File | Nature of Change |
+|---|---|
+| `pulse.cpp` | Send error detection; TCP_NODELAY and send timeout; listener lock; statusPort newline; timer clock, catch-up, locking and resetTimer fixes; AFib toggle fix; per-thread rand seeding; curl timeouts; stall logging |
+| `WebSrv.cpp` | checkURL non-blocking connect and response read; PHP process tracking and KillProcess(); orphaned PHP server terminated at startup; startup retry sequence; diagnostic logging |
+| `VetSim.cpp` | Startup and browser-launch logging; duplicate printf calls removed |
+| `main.cpp` | ErrorExit() LocalAlloc check |
+| `vetsimTasks.cpp` | Thread ID read before detach; "Task Started" output serialised |
+| `bcastServer.cpp` | "Waiting for message" console output disabled |
+
+---
+
 ## Version 2.5 — Post 2.4 Changes
 
 **Base commit:** e4e5ad6 — Release Version 2.4 (2025-11-07)  
